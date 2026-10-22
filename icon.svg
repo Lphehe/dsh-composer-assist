@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" role="img" aria-label="Composer assistant">
+  <rect x="4" y="10" width="40" height="22" rx="6" fill="none" stroke="#247bbf" stroke-width="2.5"/>
+  <path d="M11 21h13" stroke="#247bbf" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M11 26h8" stroke="#247bbf" stroke-width="2.5" stroke-linecap="round" opacity="0.55"/>
+  <path d="M33 13l1.6 3.9L38.5 18.5l-3.9 1.6L33 24l-1.6-3.9L27.5 18.5l3.9-1.6z" fill="#247bbf"/>
+  <path d="M18 38l3 4 7-8" fill="none" stroke="#247bbf" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+</svg>
