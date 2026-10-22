@@ -13,6 +13,7 @@ const SETTINGS_PATH = '/api/composer-assist/settings'
 const SUGGEST_PATH = '/api/composer-assist/suggest'
 const TURN_PATH = '/api/composer-assist/turn'
 const PROBE_PATH = '/api/composer-assist/probe'
+const FEEDBACK_PATH = '/api/composer-assist/feedback'
 
 /**
  * Last self-report the browser sent about what it actually rendered. The Client
@@ -75,13 +76,21 @@ const DEFAULTS = {
   maxOutputTokens: 600,
   timeoutMs: 20000,
   debounceMs: 600,
+  // Predictions below this confidence are dropped. 0 keeps every prediction and
+  // lets the client show the badge instead; raise it to filter noise.
+  minConfidence: 0,
+  // Acceptance learning: record what the user accepts and dismisses and feed the
+  // pattern back into later prompts. Off by default — it is a privacy-sensitive
+  // behaviour and should not turn on silently.
+  learn: false,
+  learnStats: { accepted: 0, dismissed: 0, acceptedChars: 0, dismissedChars: 0 },
 }
 
 const SYSTEM = {
   next: `You predict the user's next message in an ongoing coding conversation.
-Read the transcript and write the single message the user is most likely to send next.
-Rules: write as the user, in the user's own language and tone; one short instruction or question; no greeting, no preamble, no quotes, no markdown fence; never describe what you are doing.
-Always produce one concrete message. If the next step is unclear, predict the most plausible clarifying question or follow-up check rather than an empty answer.`,
+Read the transcript and write up to 3 DISTINCT candidate messages the user might send next.
+Rules: write as the user, in the user's own language and tone; each candidate is one short instruction or question; no greeting, no preamble, no quotes, no markdown fence; never describe what you are doing. The candidates must be genuinely different from one another.
+Output a numbered list, one candidate per line, then a final line 'CONFIDENCE: <number 0..1>' with your own rough self-assessment of how likely it is that one of these is close to what the user sends next. It is a guess, not a calibrated probability: use a low number when you are unsure rather than inventing precision. If nothing sensible follows, output nothing at all.`,
   complete: `You complete the user's unfinished draft message in an ongoing coding conversation.
 Output ONLY the continuation text that should be appended to the draft. Never repeat or paraphrase the draft, never add quotes, labels, or fences. Keep it short. If no natural continuation exists, output nothing.`,
   polish: `You rewrite the user's draft message to be clearer and more precise for an AI coding agent.
@@ -89,6 +98,43 @@ Keep the user's language, intent, and every constraint. Preserve code, paths, id
 }
 
 const MAX_TRANSCRIPT_MESSAGES = 12
+
+/** Ceilings for the learning counters, so a long-lived install cannot grow them without bound. */
+const STAT_MAX_COUNT = 1_000_000
+const STAT_MAX_CHARS = 100_000_000
+
+/** One feedback post cannot carry more text than this; only its length is recorded. */
+const MAX_FEEDBACK_CHARS = 4000
+
+/**
+ * Serializes every settings read-modify-write. Two feedback posts arriving
+ * together would otherwise both read the same counters and the later write
+ * would drop the earlier increment.
+ */
+let settingsQueue = Promise.resolve()
+function withSettings(work) {
+  const run = settingsQueue.then(work, work)
+  settingsQueue = run.then(() => {}, () => {})
+  return run
+}
+
+/** The four counters, from whatever the settings file actually holds. */
+function statsOf(raw) {
+  // Non-finite values (NaN, Infinity) are not counters; treat them as zero rather
+  // than letting a clamp turn them into the ceiling.
+  const at = (value, max) => {
+    const number = Number(value)
+    if (!Number.isFinite(number)) return 0
+    return Math.min(max, Math.max(0, Math.floor(number)))
+  }
+  if (raw === null || typeof raw !== 'object' || Array.isArray(raw)) return { ...DEFAULTS.learnStats }
+  return {
+    accepted: at(raw.accepted, STAT_MAX_COUNT),
+    dismissed: at(raw.dismissed, STAT_MAX_COUNT),
+    acceptedChars: at(raw.acceptedChars, STAT_MAX_CHARS),
+    dismissedChars: at(raw.dismissedChars, STAT_MAX_CHARS),
+  }
+}
 
 /** Read the persisted settings document, defaulting on any malformed or missing file. */
 async function readSettings() {
@@ -110,9 +156,18 @@ async function writeSettings(patch) {
   }
   next.enabled = next.enabled === true
   if (!['auto', 'word', 'both', 'off'].includes(next.mode)) next.mode = DEFAULTS.mode
+  // 'card' is a legacy value: it renders like 'bar', so it stays accepted rather
+  // than rewriting a saved setting behind the user's back.
   if (!['bar', 'card', 'inline'].includes(next.display)) next.display = DEFAULTS.display
   next.provider = typeof next.provider === 'string' ? next.provider : ''
   next.model = typeof next.model === 'string' ? next.model : ''
+  // Confidence bar: keep it a number in [0, 1] regardless of what was posted.
+  const bar = Number(next.minConfidence)
+  next.minConfidence = Number.isFinite(bar) && bar >= 0 && bar <= 1 ? bar : DEFAULTS.minConfidence
+  // Learning toggle and its counters: never let a malformed object reach the file,
+  // and clamp them so a long-lived install cannot grow the counters without bound.
+  next.learn = next.learn === true
+  next.learnStats = statsOf(next.learnStats)
   const target = settingsFile()
   await mkdir(dirname(target), { recursive: true })
   await writeFile(target, `${JSON.stringify(next, null, 2)}\n`, 'utf8')
@@ -145,6 +200,83 @@ function transcript(session, maxChars) {
   let text = lines.join('\n\n')
   if (text.length > maxChars) text = text.slice(text.length - maxChars)
   return text
+}
+
+/**
+ * Build a compact workspace snapshot: top-level file names and git state.
+ * Every step is bounded and fails soft — a missing directory, a non-repo, or a
+ * slow git call all degrade to "no context" rather than breaking the suggestion.
+ *
+ * Reads go through the session's own `fs` and `subprocess` providers instead of
+ * node builtins, so a sandboxed or remote provider keeps its permissions and
+ * execution world: this must never see a file the session itself cannot.
+ * Names only: file contents are never read, and credential-shaped names are
+ * dropped so a prompt never carries them.
+ */
+const MAX_SCAN_ENTRIES = 200
+const MAX_GIT_BYTES = 64 * 1024
+const CONTEXT_TIMEOUT_MS = 3000
+const PRIVATE_NAME = /(^|[/\s])\.env|credential|secret|token|\.pem$|id_(rsa|ed25519|ecdsa)/i
+
+/** Resolve `promise` or give up after `ms`, whichever comes first. */
+function within(promise, ms) {
+  let timer
+  return Promise.race([
+    promise,
+    new Promise((resolve) => { timer = setTimeout(resolve, ms, undefined) }),
+  ]).finally(() => clearTimeout(timer))
+}
+
+async function gitStatus(subprocess, cwd) {
+  if (subprocess === undefined) return ''
+  let handle
+  try {
+    handle = subprocess.spawn({
+      argv: ['git', '-C', cwd, 'status', '--short', '--branch'],
+      cwd,
+      stdio: { stdin: 'ignore', stdout: { maxBytes: MAX_GIT_BYTES }, stderr: 'ignore' },
+      graceMs: 1000,
+      signal: AbortSignal.timeout(CONTEXT_TIMEOUT_MS),
+    })
+    // The signal is advisory to a provider; the deadline here is what actually
+    // keeps a hung git from holding the prediction open.
+    const outcome = await within(handle.done, CONTEXT_TIMEOUT_MS)
+    if (outcome === undefined || outcome.exitCode !== 0) return ''
+    return handle.collected.stdout?.readFrom(0).text.trim() ?? ''
+  } catch {
+    return ''
+  } finally {
+    try { handle?.terminate() } catch { /* already gone */ }
+  }
+}
+
+async function workspaceContext(providers, cwd, maxFiles = 8) {
+  const fs = providers?.fs
+  if (fs === undefined || typeof cwd !== 'string' || cwd === '') return ''
+  const signal = AbortSignal.timeout(CONTEXT_TIMEOUT_MS)
+  try {
+    const dir = await within(fs.resolve(cwd, { signal }), CONTEXT_TIMEOUT_MS)
+    if (dir === undefined) return ''
+    // Bound the scan: a huge or network directory must not stall a prediction.
+    const listed = await within(fs.listDir(dir, signal), CONTEXT_TIMEOUT_MS)
+    if (listed === undefined) return ''
+    const recent = listed
+      .slice(0, MAX_SCAN_ENTRIES)
+      .filter((entry) => entry.type === 'file' && !PRIVATE_NAME.test(entry.name))
+      .slice(0, maxFiles)
+      .map((entry) => entry.name)
+
+    const lines = []
+    const status = await gitStatus(providers.subprocess, cwd)
+    const [first = '', ...rest] = status.split('\n')
+    if (first.startsWith('## ')) lines.push(`branch: ${first.slice(3)}`)
+    const changed = rest.filter((line) => line !== '' && !PRIVATE_NAME.test(line.slice(3))).slice(0, 20)
+    if (changed.length > 0) lines.push(`git: ${changed.join('; ')}`)
+    if (recent.length > 0) lines.push(`files: ${recent.join(', ')}`)
+    return lines.join('\n')
+  } catch {
+    return ''
+  }
 }
 
 /** Settings route first, then the session's last real request, then the deployment default. */
@@ -204,6 +336,41 @@ async function runAuxiliary(ctx, session, settings, system, prompt, signal, rout
   return clean(text)
 }
 
+/**
+ * Parse the model's numbered candidate list plus the trailing confidence line.
+ * Falls back to treating the whole text as one candidate when the format is
+ * not followed, so a chatty model cannot blank the suggestion.
+ *
+ * The confidence is a self-assessment, not a calibrated probability: any number
+ * the model writes must be in [0, 1]; an absent or invalid value stays null.
+ */
+function parseCandidates(text) {
+  const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
+  const candidates = []
+  let confidence = null
+  for (const line of lines) {
+    const conf = /^CONFIDENCE:\s*(\d+(?:\.\d+)?)\s*$/i.exec(line)
+    if (conf !== null) {
+      const value = Number(conf[1])
+      confidence = Number.isFinite(value) && value >= 0 && value <= 1 ? value : null
+      continue
+    }
+    const numbered = /^\d+[.)]\s*(.+)$/.exec(line)
+    if (numbered !== null && candidates.length < 3) candidates.push(numbered[1].trim())
+  }
+  if (candidates.length === 0) {
+    // No numbered list: keep the raw text as a single candidate. Drop the
+    // confidence line first so it never leaks into the suggestion itself.
+    const withoutConf = text
+      .split('\n')
+      .filter((line) => !/^CONFIDENCE:/i.test(line.trim()))
+      .join('\n')
+    const single = clean(withoutConf)
+    if (single !== '') candidates.push(single)
+  }
+  return { candidates, confidence }
+}
+
 /** Build the framed prompt for one requested kind. */
 function buildPrompt(kind, draft, history) {
   if (kind === 'next') {
@@ -216,6 +383,27 @@ function buildPrompt(kind, draft, history) {
     return `${context}The user is currently typing this draft:\n\n${draft}\n\nWrite only the continuation.`
   }
   return `The user's draft message:\n\n${draft}\n\nRewrite it.`
+}
+
+/**
+ * Turn accumulated accept/dismiss stats into one sentence of style guidance.
+ * Needs a handful of samples before it says anything, so a fresh install is not
+ * steered by a signal derived from one or two clicks.
+ */
+function learnHint(rawStats) {
+  // The file is user-editable, so normalise here too rather than trusting shapes.
+  const stats = statsOf(rawStats)
+  if (stats.accepted + stats.dismissed < 5) return ''
+  const avgAccepted = stats.accepted > 0 ? stats.acceptedChars / stats.accepted : 0
+  const avgDismissed = stats.dismissed > 0 ? stats.dismissedChars / stats.dismissed : 0
+  if (avgAccepted <= 0 || avgDismissed <= 0) return ''
+  if (avgAccepted < avgDismissed * 0.7) {
+    return 'The user tends to accept shorter suggestions than the ones they dismiss.'
+  }
+  if (avgAccepted > avgDismissed * 1.4) {
+    return 'The user tends to accept longer suggestions than the ones they dismiss.'
+  }
+  return ''
 }
 
 /** Read one JSON request body with a hard byte ceiling. */
@@ -247,13 +435,47 @@ export function apply(ctx) {
       requestBody: 'buffered',
       fetch: async (request) => {
         try {
-          if (request.method === 'POST') return json(200, { ok: true, settings: await writeSettings(await readJson(request)) })
+          if (request.method === 'POST') {
+            const patch = await readJson(request)
+            return json(200, { ok: true, settings: await withSettings(() => writeSettings(patch)) })
+          }
           return json(200, { ok: true, settings: await readSettings() })
         } catch (error) {
           return json(400, { ok: false, error: error instanceof Error ? error.message : String(error) })
         }
       },
     }), 'composer-assist: settings route')
+
+    // Record one accept/dismiss so the prediction can learn the user's style.
+    // Only acts when `learn` is on; the client calls this on Tab-accept and dismiss.
+    // `action: 'reset'` clears the counters. Every read-modify-write runs through
+    // `withSettings`, so two clicks landing together cannot lose one increment.
+    scoped.effect(() => scoped.connection.fetch.register({
+      path: FEEDBACK_PATH,
+      methods: ['POST'],
+      requestBody: 'buffered',
+      fetch: async (request) => {
+        try {
+          const body = await readJson(request)
+          const action = body.action
+          if (action !== 'accept' && action !== 'dismiss' && action !== 'reset') {
+            return json(400, { ok: false, error: 'action 必须是 accept、dismiss 或 reset' })
+          }
+          const text = typeof body.text === 'string' ? body.text.slice(0, MAX_FEEDBACK_CHARS) : ''
+          return await withSettings(async () => {
+            const settings = await readSettings()
+            if (settings.learn !== true && action !== 'reset') return json(200, { ok: true, ignored: true })
+            const stats = action === 'reset' ? { ...DEFAULTS.learnStats } : statsOf(settings.learnStats)
+            if (action === 'accept') { stats.accepted += 1; stats.acceptedChars += text.length }
+            else if (action === 'dismiss') { stats.dismissed += 1; stats.dismissedChars += text.length }
+            await writeSettings({ learnStats: stats })
+            return json(200, { ok: true, stats })
+          })
+        } catch (error) {
+          return json(400, { ok: false, error: error instanceof Error ? error.message : String(error) })
+        }
+      },
+    }), 'composer-assist: feedback route')
 
     // Record one finished turn per session; the agent-scoped listener filters to
     // the session it belongs to.
@@ -323,7 +545,7 @@ export function apply(ctx) {
         const settings = await readSettings()
         const draft = typeof body.draft === 'string' ? body.draft : ''
         const history = transcript(session, settings.maxInputChars)
-        const prompt = buildPrompt(kind, draft, history)
+        const basePrompt = buildPrompt(kind, draft, history)
         // Record what the transcript actually looked like at the moment of the
         // request: an empty fold and an empty log are different bugs.
         lastTranscript = {
@@ -332,11 +554,26 @@ export function apply(ctx) {
           chars: history.length,
           seq: String(session.seq),
         }
-        if (prompt === undefined) {
+        if (basePrompt === undefined) {
           // Name the reason: an empty transcript and a model that answered nothing
           // look identical to the client, and they need different fixes.
           return json(200, { ok: true, text: '', reason: kind === 'next' && history === '' ? 'empty-transcript' : 'empty-input' })
         }
+        // Acceptance learning appends one style sentence when it has enough signal;
+        // it is opt-in and off by default.
+        const hint = settings.learn === true ? learnHint(settings.learnStats) : ''
+        // Workspace context: recent files and git state. Best-effort — a missing
+        // service, an unreadable directory, or a slow git call all degrade to no
+        // context instead of failing the suggestion. `get(session)` is a read-only
+        // synchronous lookup, so no agent handle or `ensure()` round trip is needed.
+        let context = ''
+        try {
+          context = await workspaceContext(
+            { fs: scoped.get('fs'), subprocess: scoped.get('subprocess') },
+            scoped.get('workingDirectory')?.get(session))
+        } catch { /* context is optional */ }
+        lastTranscript.workspaceChars = context.length
+        const prompt = [basePrompt, hint, context].filter((part) => part !== '').join('\n\n')
 
         const key = `${session.id}:${kind}`
         inflight.get(key)?.abort()
@@ -344,9 +581,23 @@ export function apply(ctx) {
         inflight.set(key, abort)
         const timer = setTimeout(() => abort.abort(), settings.timeoutMs)
         try {
-          const text = await generate(scoped, session, settings, SYSTEM[kind], prompt, abort.signal)
-          if (text === '') return json(200, { ok: true, text: '', reason: 'model-empty', transcriptChars: history.length })
-          return json(200, { ok: true, text })
+          const raw = await generate(scoped, session, settings, SYSTEM[kind], prompt, abort.signal)
+          if (raw === '') return json(200, { ok: true, text: '', reason: 'model-empty', transcriptChars: history.length })
+          // `next` now returns a candidate list; the other kinds stay single-text.
+          if (kind === 'next') {
+            const { candidates, confidence } = parseCandidates(raw)
+            if (candidates.length === 0) {
+              return json(200, { ok: true, text: '', reason: 'model-empty', transcriptChars: history.length })
+            }
+            // A low-confidence prediction is noise; drop it only when the user
+            // raised the bar above 0. Otherwise the client shows it with a badge.
+            const bar = settings.minConfidence ?? 0
+            if (confidence !== null && bar > 0 && confidence < bar) {
+              return json(200, { ok: true, text: '', candidates, confidence, reason: 'low-confidence' })
+            }
+            return json(200, { ok: true, text: candidates[0], candidates, confidence })
+          }
+          return json(200, { ok: true, text: raw })
         } catch (error) {
           if (abort.signal.aborted) return json(200, { ok: true, text: '' })
           return json(200, { ok: false, error: error instanceof Error ? error.message : String(error) })
@@ -358,3 +609,6 @@ export function apply(ctx) {
     }), 'composer-assist: suggest route')
   })
 }
+
+/** Internals the self-check exercises directly; not part of the plugin contract. */
+export const __test = { parseCandidates, statsOf, learnHint, workspaceContext, gitStatus, readSettings, writeSettings, withSettings }

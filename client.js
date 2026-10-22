@@ -18,7 +18,12 @@ window.__ModuleLoader__.load({
       'strip.next': '预测输入框',
       'strip.complete': '补全草稿',
       'strip.accept': 'Tab 接受',
+      'strip.acceptHint': 'Tab 接受（←/→ 切换候选）',
       'strip.dismiss': '忽略',
+      'strip.confidence': '置信度',
+      'strip.confidenceHigh': '较高',
+      'strip.confidenceMedium': '中等',
+      'strip.confidenceLow': '较低',
       'strip.thinking': '正在生成…',
       'strip.failed': '生成失败',
       'predict.again': '重新预测输入框',
@@ -30,15 +35,20 @@ window.__ModuleLoader__.load({
       'settings.title': '输入框预测',
       'settings.description': '在输入框上方预测你想输入的内容、补全草稿，或点 ✨ 润色提示词。',
       'settings.enabled': '启用',
+      'settings.learn': '接受学习',
+      'settings.learnHint': '记录你接受/忽略的建议来调整后续预测。默认关闭。',
+      'settings.reset': '清除统计',
+      'settings.resetHint': '清空已记录的接受/忽略计数。',
+      'settings.resetFailed': '清除统计失败',
       'settings.mode': '模式',
       'settings.mode.auto': '自动预测（回复结束后）',
       'settings.mode.word': '单词补全（输入时）',
       'settings.mode.both': '两者都要',
       'settings.mode.off': '只在手动调用时',
       'settings.display': '显示位置',
-      'settings.displayHint': '行内 = 直接显示在输入框里；卡片 = 输入框上方。',
-      'settings.display.inline': '输入框内（推荐）',
-      'settings.display.card': '输入框上方的卡片',
+      'settings.displayHint': '建议栏 = 输入框上方独立一行（推荐）；行内 = 画在输入框里。',
+      'settings.display.bar': '输入框上方的建议栏（推荐）',
+      'settings.display.inline': '输入框内',
       'settings.model': '预测模型',
       'settings.model.inherit': '跟随本会话模型',
       'settings.enabledHint': '关闭后行为与未安装时完全一致。',
@@ -52,6 +62,8 @@ window.__ModuleLoader__.load({
       'settings.timeoutMsHint': '超时后静默丢弃，不打扰输入。',
       'settings.maxInputChars': '上下文上限（字符）',
       'settings.maxInputCharsHint': '发给预测模型的最近对话长度。',
+      'settings.minConfidence': '置信度门槛',
+      'settings.minConfidenceHint': '低于此值的预测会被丢弃；0 表示全部保留，只在建议栏标注置信度。',
       'settings.costNote': '每次预测都是一次真实计费的模型调用；关掉开关即可完全停止。',
       'settings.saveFailed': '设置保存失败',
       'settings.noModels': '当前没有可用模型，请先在「模型」设置里配置。',
@@ -61,7 +73,12 @@ window.__ModuleLoader__.load({
       'strip.next': 'Predicted input',
       'strip.complete': 'Draft continuation',
       'strip.accept': 'Tab to accept',
+      'strip.acceptHint': 'Tab to accept (←/→ to cycle)',
       'strip.dismiss': 'Dismiss',
+      'strip.confidence': 'confidence',
+      'strip.confidenceHigh': 'high',
+      'strip.confidenceMedium': 'medium',
+      'strip.confidenceLow': 'low',
       'strip.thinking': 'Generating…',
       'strip.failed': 'Generation failed',
       'predict.again': 'Predict input again',
@@ -73,15 +90,20 @@ window.__ModuleLoader__.load({
       'settings.title': 'Composer prediction',
       'settings.description': 'Predict what you are about to type, complete a draft, or polish it with ✨.',
       'settings.enabled': 'Enabled',
+      'settings.learn': 'Acceptance learning',
+      'settings.learnHint': 'Remember what you accept and dismiss to tune later predictions. Off by default.',
+      'settings.reset': 'Clear stats',
+      'settings.resetHint': 'Erase the recorded accept/dismiss counters.',
+      'settings.resetFailed': 'Could not clear the stats',
       'settings.mode': 'Mode',
       'settings.mode.auto': 'Auto (after a reply)',
       'settings.mode.word': 'Word completion (while typing)',
       'settings.mode.both': 'Both',
       'settings.mode.off': 'Manual only',
       'settings.display': 'Where it shows',
-      'settings.displayHint': 'Inline draws it inside the composer; Card puts it above.',
-      'settings.display.inline': 'Inside the composer (recommended)',
-      'settings.display.card': 'As a card above',
+      'settings.displayHint': 'Bar is its own row above the composer (recommended); Inline draws it inside.',
+      'settings.display.bar': 'Bar above the composer (recommended)',
+      'settings.display.inline': 'Inside the composer',
       'settings.model': 'Prediction model',
       'settings.model.inherit': 'Follow this session',
       'settings.enabledHint': 'Off behaves exactly like the plugin not being installed.',
@@ -95,6 +117,8 @@ window.__ModuleLoader__.load({
       'settings.timeoutMsHint': 'A timeout drops the request silently and never blocks typing.',
       'settings.maxInputChars': 'Context cap (characters)',
       'settings.maxInputCharsHint': 'How much recent conversation is sent to the prediction model.',
+      'settings.minConfidence': 'Confidence bar',
+      'settings.minConfidenceHint': 'Predictions below this are dropped; 0 keeps them and only shows the confidence badge.',
       'settings.costNote': 'Every prediction is a real billed model call; switch this off to stop it entirely.',
       'settings.saveFailed': 'Could not save settings',
       'settings.noModels': 'No models are available; configure one under Models first.',
@@ -156,9 +180,31 @@ window.__ModuleLoader__.load({
         reportProbe({ phase: 'empty-result', reason: body.reason, transcriptChars: body.transcriptChars })
         // A brand-new or empty session has nothing to predict from. That is not a
         // failure, so surface it as a quiet "no suggestion", not a silent no-op.
-        return ''
+        return { text: '', candidates: [], confidence: null, reason: body.reason }
       }
-      return text
+      // `next` returns a candidate list; the other kinds return a single text.
+      const candidates = Array.isArray(body.candidates)
+        ? body.candidates.filter(item => typeof item === 'string' && item.trim() !== '').slice(0, 3)
+        : []
+      if (candidates.length === 0 && text !== '') candidates.push(text)
+      const confidence = Number.isFinite(body.confidence) && body.confidence >= 0 && body.confidence <= 1 ? body.confidence : null
+      return { text: candidates[0] ?? '', candidates, confidence }
+    }
+
+    /**
+     * Tell the Host what the user did with a suggestion. Best-effort: a failed
+     * feedback call must never break accepting or dismissing. Only acted on when
+     * the `learn` setting is on, which the Host checks itself.
+     */
+    async function recordFeedback(action, text) {
+      try {
+        const response = await fetch(`${API}/feedback`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ action, text, kind: 'next' }),
+        })
+        return await response.json()
+      } catch { /* feedback is advisory, never fatal */ return undefined }
     }
 
     /**
@@ -340,23 +386,20 @@ window.__ModuleLoader__.load({
     /** Subscribers that re-read `hasSuggestion` when a suggestion appears or clears. */
     const listeners = new Set()
 
-    /** One-shot callbacks waiting for the current request to settle. */
-    const settledListeners = new Set()
-
-    /** Release everyone waiting on a settled request. */
-    function notifySettled() {
-      for (const listener of [...settledListeners]) { settledListeners.delete(listener); listener() }
-    }
-
     /** A prediction request in flight, owned by the module (not a component). */
     function runRequest(kind, sessionId, draft, cause) {
       const id = nextRequestId(sessionId)
       reportProbe({ phase: 'begin', trace: `req-${id}`, owner: sessionId, kind, cause })
-      return request(kind, sessionId, draft).then((text) => {
+      return request(kind, sessionId, draft).then((result) => {
         const stale = id !== currentRequestId(sessionId)
-        reportProbe({ phase: 'result', trace: `req-${id}`, kind, textLength: text.length, stale, owner: sessionId })
-        if (text === '') return null
-        const record = { kind, text, draftAt: draft }
+        reportProbe({ phase: 'result', trace: `req-${id}`, kind,
+          textLength: result.text.length, stale, owner: sessionId, confidence: result.confidence })
+        if (result.text === '') return null
+        // `next` carries a candidate list and a confidence; the other kinds stay single.
+        const record = {
+          kind, text: result.text, draftAt: draft,
+          candidates: result.candidates, confidence: result.confidence,
+        }
         if (!stale) rememberSuggestion(sessionId, record)
         return record
       }).catch(() => null)
@@ -389,6 +432,13 @@ window.__ModuleLoader__.load({
      */
     const suggestionBySession = new Map()
 
+    /**
+     * Which candidate of the stored suggestion is currently shown, per session.
+     * Kept separate from the suggestion because switching it is a UI action that
+     * must survive a conversation switch just like the suggestion itself.
+     */
+    const candidateIndexBySession = new Map()
+
     /** Monotonic instance counter for mount/unmount tracing. */
     let instanceSeq = 0
 
@@ -412,13 +462,56 @@ window.__ModuleLoader__.load({
     /** Remember or forget one session's pending suggestion. */
     function rememberSuggestion(sessionId, value) {
       if (sessionId === undefined) return
-      if (value === null) suggestionBySession.delete(sessionId)
-      else {
+      if (value === null) {
+        suggestionBySession.delete(sessionId)
+        candidateIndexBySession.delete(sessionId)
+      } else {
         suggestionBySession.delete(sessionId)
         suggestionBySession.set(sessionId, value)
+        // A fresh prediction always starts on its first candidate.
+        candidateIndexBySession.set(sessionId, 0)
       }
       while (suggestionBySession.size > 8) suggestionBySession.delete(suggestionBySession.keys().next().value)
       publishStore()
+    }
+
+    /** The currently shown candidate index for one session. */
+    function candidateIndex(sessionId) {
+      return candidateIndexBySession.get(sessionId) ?? 0
+    }
+
+    /** Total candidates in the stored suggestion (1 when there is no list). */
+    function candidateTotal(sessionId) {
+      const record = suggestionBySession.get(sessionId)
+      if (record === null || record === undefined) return 0
+      return Array.isArray(record.candidates) && record.candidates.length > 0
+        ? record.candidates.length
+        : 1
+    }
+
+    /** The text of the currently shown candidate. */
+    function currentCandidate(sessionId) {
+      const record = suggestionBySession.get(sessionId)
+      if (record === null || record === undefined) return ''
+      const total = candidateTotal(sessionId)
+      const index = Math.min(candidateIndex(sessionId), total - 1)
+      if (Array.isArray(record.candidates) && record.candidates.length > 0) {
+        return String(record.candidates[index] ?? '')
+      }
+      return record.text
+    }
+
+    /**
+     * Cycle to the next or previous candidate. Returns false when there is only
+     * one candidate, so the keyboard handler can leave the suggestion untouched.
+     */
+    function cycleCandidate(sessionId, delta) {
+      const total = candidateTotal(sessionId)
+      if (total <= 1) return false
+      const next = (candidateIndex(sessionId) + delta + total) % total
+      candidateIndexBySession.set(sessionId, next)
+      publishStore()
+      return true
     }
 
     /** Accept handle published by the mounted strip for the keyboard listener. */
@@ -468,7 +561,6 @@ window.__ModuleLoader__.load({
       const sessionIdRef = useRef(sessionId)
       sessionIdRef.current = sessionId
       const pendingRef = useRef(null)
-      const settledRef = useRef(undefined)
       const draftRef = useRef(draft)
       draftRef.current = draft
 
@@ -493,8 +585,10 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         const apply = () => {
           const restored = suggestionBySession.get(sessionId) ?? null
-          // A stale local value must never shadow the store: the store is the truth.
-          setPending(restored)
+          // A fresh object on every publish: the candidate index lives in the module
+          // store, so handing React the same reference would skip the re-render and
+          // an arrow-key cycle would never repaint.
+          setPending(restored === null ? null : { ...restored })
           // Generating state lives with the session too, so switching back shows the
           // "generating" bar again instead of a blank gap until the result lands.
           setBusy(pendingBySession.has(sessionId))
@@ -540,11 +634,11 @@ window.__ModuleLoader__.load({
         if (sessionIdRef.current === owner) {
           // An empty result means "nothing this time": keep whatever the store holds
           // for this session instead of blanking the bar or flagging a failure.
-          setPending(suggestionBySession.get(owner) ?? null)
+          const stored = suggestionBySession.get(owner)
+          setPending(stored === undefined ? null : { ...stored })
           setBusy(false)
           for (const listener of listeners) listener()
         }
-        notifySettled()
       }
 
       // Auto prediction: exactly one request per finished turn.
@@ -610,22 +704,19 @@ window.__ModuleLoader__.load({
       // stale one captured on the first render.
       askRef.current = ask
       pendingRef.current = pending
-      settledRef.current = settledListeners
       manualRequest.current = (kind) => {
         reportProbe({ phase: 'manual-fire', kind: kind ?? 'next', hasAsk: askRef.current !== undefined, enabled })
         void askRef.current?.(kind ?? 'next', draftRef.current, 'manual')
       }
       manualRequest.hasSuggestion = () => pendingRef.current !== null
-      manualRequest.whenSettled = (listener) => { settledRef.current?.add(listener) }
       manualRequest.subscribe = (listener) => {
         listeners.add(listener)
         return () => { listeners.delete(listener) }
       }
 
-      // Broadcast pending changes to the button, and release a waiting request.
+      // Broadcast pending changes to the button.
       useEffect(() => {
         for (const listener of listeners) listener()
-        if (pending !== null || failed) notifySettled()
       }, [pending, failed])
 
       // Report real alignment whenever the bar is on screen, so a layout regression
@@ -646,9 +737,12 @@ window.__ModuleLoader__.load({
           // Never accept a suggestion that the store says belongs to another session.
           const stored = suggestionBySession.get(sessionId)
           if (stored === null || stored === undefined) return false
-          if (stored.kind === 'next') inputActions.setDraft(stored.text)
-          else if (stored.kind === 'complete') inputActions.setDraft(`${draftRef.current}${stored.text}`)
-          else inputActions.setDraft(stored.text)
+          // Accept whatever candidate is currently shown, not necessarily the first.
+          const text = currentCandidate(sessionId)
+          if (stored.kind === 'next') inputActions.setDraft(text)
+          else if (stored.kind === 'complete') inputActions.setDraft(`${draftRef.current}${text}`)
+          else inputActions.setDraft(text)
+          void recordFeedback('accept', text)
           clear('accept')
           return true
         }
@@ -657,22 +751,37 @@ window.__ModuleLoader__.load({
 
       useEffect(() => {
         const onKey = (event) => {
-          if (event.key !== 'Escape' || pending === null) return
+          if (pending === null) return
           // Escape anywhere in the app (closing a menu, a dialog, the sidebar) is not
           // a request to discard the suggestion. Only while the composer holds focus.
           const target = event.target
           const insideComposer = target instanceof Element
             && target.closest('[data-composer-card]') !== null
           if (!insideComposer) return
+          // An IME owns Escape and the arrows while it composes; taking them would
+          // cancel a candidate or move inside the composition.
+          if (event.isComposing === true || event.keyCode === 229) return
+          // A modifier means the user asked for selection, word, or line movement.
+          if (event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return
+          if (event.defaultPrevented) return
+          // Arrow keys cycle through the candidate list; Tab then accepts the pick.
+          // Only on an empty draft: with text in the composer the caret has somewhere
+          // to go, and stealing the arrow would break normal editing.
+          if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && draftRef.current === '') {
+            if (cycleCandidate(sessionId, event.key === 'ArrowRight' ? 1 : -1)) {
+              event.preventDefault()
+              return
+            }
+          }
           // Hide, do not forget: an Escape must not destroy what a switch could restore.
-          clear('hide')
+          if (event.key === 'Escape') clear('hide')
         }
         window.addEventListener('keydown', onKey)
         return () => { window.removeEventListener('keydown', onKey) }
       }, [pending])
 
       const inline = settings?.display === 'inline'
-      const ghost = !enabled || pending === null ? '' : pending.text
+      const ghost = !enabled || pending === null ? '' : currentCandidate(sessionId)
 
       // The ghost lives over the composer surface, not in this component's tree, so
       // it is reconciled on every relevant change and released on unmount.
@@ -699,17 +808,43 @@ window.__ModuleLoader__.load({
 
       const badge = busy ? t('strip.thinking')
         : failed ? t('strip.failed')
-          : t(pending.kind === 'complete' ? 'strip.complete' : 'strip.next')
+          // `pending` can be null while busy or failed, so never read through it.
+          : t(pending?.kind === 'complete' ? 'strip.complete' : 'strip.next')
+
+      // The candidate list and its confidence ride the store, not component state,
+      // so a switch mid-cycle restores the same pick.
+      const stored = pending !== null ? suggestionBySession.get(sessionId) : null
+      const text = currentCandidate(sessionId)
+      const total = candidateTotal(sessionId)
+      const confidence = stored?.confidence
+      // Built here rather than via locale interpolation: the locale helper's
+      // placeholder behaviour is not verified, and numbers need no translation.
+      const counter = total > 1 ? `${candidateIndex(sessionId) + 1}/${total}` : ''
+      // The model's number is its own rough guess, so it is labelled as such and
+      // rounded to a coarse band: a made-up 73% would read as a real probability.
+      const confidenceText = typeof confidence === 'number'
+        ? `${t('strip.confidence')} ${confidence >= 0.7 ? t('strip.confidenceHigh')
+          : confidence >= 0.4 ? t('strip.confidenceMedium') : t('strip.confidenceLow')}`
+        : null
 
       // Standalone suggestion bar above the composer. Its own element and its own
       // line, so it can never collide with the composer placeholder.
       return h('div', { style: stripStyle, role: 'status', 'aria-live': 'polite', 'data-composer-assist-bar': '' },
         h('span', { style: stripBadge }, badge),
-        h('span', { style: stripText }, pending !== null ? pending.text : ''),
+        confidenceText !== null && h('span', {
+          style: {
+            flex: '0 0 auto', fontSize: '10px', fontWeight: '600',
+            color: confidence >= 0.7 ? 'var(--dsw-alias-label-secondary)' : 'var(--dsw-alias-label-tertiary)',
+            paddingTop: '2px', whiteSpace: 'nowrap',
+          },
+        }, confidenceText),
+        h('span', { style: stripText }, pending !== null ? text : ''),
+        counter !== '' && h('span', { style: stripBadge }, counter),
         h('span', { style: stripActions },
           pending !== null && h('button', {
             type: 'button',
             onClick: () => { acceptRef.current?.() },
+            title: total > 1 ? t('strip.acceptHint') : t('strip.accept'),
             style: {
               cursor: 'pointer', border: 'none',
               background: 'var(--dsw-alias-brand-primary)',
@@ -721,7 +856,10 @@ window.__ModuleLoader__.load({
           }, t('strip.accept')),
           pending !== null && h('button', {
             type: 'button',
-            onClick: () => { clear('dismiss') },
+            onClick: () => {
+              void recordFeedback('dismiss', currentCandidate(sessionId))
+              clear('dismiss')
+            },
             title: t('strip.dismiss'),
             style: {
               cursor: 'pointer', border: '1px solid var(--dsw-alias-border-l1)',
@@ -808,7 +946,8 @@ window.__ModuleLoader__.load({
         if (!idle) return
         setBusy(true); setFailed(false)
         try {
-          const text = await request('polish', sessionId, draft)
+          // `request` answers with a record; polish only needs its text.
+          const { text } = await request('polish', sessionId, draft)
           if (text !== '') inputActions.setDraft(text)
         } catch {
           setFailed(true)
@@ -921,6 +1060,31 @@ window.__ModuleLoader__.load({
             })),
           h('div', { style: row },
             h('div', null,
+              h('div', { style: labelStyle }, t('settings.learn')),
+              h('div', { style: hintStyle }, t('settings.learnHint'))),
+            h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
+              h('input', {
+                type: 'checkbox',
+                checked: current?.learn === true,
+                onChange: event => { void save({ learn: event.target.checked }) },
+              }),
+              h('button', {
+                type: 'button',
+                onClick: async () => {
+                  setError('')
+                  const body = await recordFeedback('reset', '')
+                  if (body?.ok !== true) setError(t('settings.resetFailed'))
+                  await readSettings()
+                },
+                title: t('settings.resetHint'),
+                style: {
+                  cursor: 'pointer', border: '1px solid var(--dsw-alias-border-l1)',
+                  background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
+                  borderRadius: '8px', padding: '4px 10px', fontSize: '12px',
+                },
+              }, t('settings.reset')))),
+          h('div', { style: row },
+            h('div', null,
               h('div', { style: labelStyle }, t('settings.mode')),
               h('div', { style: hintStyle }, t('settings.modeHint'))),
             h('select', {
@@ -934,9 +1098,9 @@ window.__ModuleLoader__.load({
               h('div', { style: hintStyle }, t('settings.displayHint'))),
             h('select', {
               style: selectStyle,
-              value: current?.display ?? 'inline',
+              value: current?.display === 'inline' ? 'inline' : 'bar',
               onChange: event => { void save({ display: event.target.value }) },
-            }, ['inline', 'card'].map(display => h('option', { key: display, value: display }, t(`settings.display.${display}`))))),
+            }, ['bar', 'inline'].map(display => h('option', { key: display, value: display }, t(`settings.display.${display}`))))),
           h('div', { style: row },
             h('div', null,
               h('div', { style: labelStyle }, t('settings.model')),
@@ -977,6 +1141,11 @@ window.__ModuleLoader__.load({
               h('div', { style: labelStyle }, t('settings.maxInputChars')),
               h('div', { style: hintStyle }, t('settings.maxInputCharsHint'))),
             number('maxInputChars', 1000, 100000)),
+          h('div', { style: row },
+            h('div', null,
+              h('div', { style: labelStyle }, t('settings.minConfidence')),
+              h('div', { style: hintStyle }, t('settings.minConfidenceHint'))),
+            number('minConfidence', 0, 1)),
         ),
 
         h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)', margin: '4px 0 0' } },
