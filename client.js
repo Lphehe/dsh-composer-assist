@@ -19,6 +19,8 @@ window.__ModuleLoader__.load({
       'strip.complete': '补全草稿',
       'strip.accept': 'Tab 接受',
       'strip.acceptHint': 'Tab 接受（←/→ 切换候选）',
+      'strip.preview': '预览 · 未填入草稿',
+      'strip.cycle': '←/→ 切换候选',
       'strip.dismiss': '忽略',
       'strip.confidence': '置信度',
       'strip.confidenceHigh': '较高',
@@ -74,6 +76,8 @@ window.__ModuleLoader__.load({
       'strip.complete': 'Draft continuation',
       'strip.accept': 'Tab to accept',
       'strip.acceptHint': 'Tab to accept (←/→ to cycle)',
+      'strip.preview': 'Preview · not inserted',
+      'strip.cycle': '←/→ switch candidates',
       'strip.dismiss': 'Dismiss',
       'strip.confidence': 'confidence',
       'strip.confidenceHigh': 'high',
@@ -207,21 +211,8 @@ window.__ModuleLoader__.load({
       } catch { /* feedback is advisory, never fatal */ return undefined }
     }
 
-    /**
-     * Paint the suggestion as trailing ghost text inside the composer.
-     *
-     * Why not the host's `--dsh-composer-hint`: that rule lives on
-     * `.input p:last-child::after`, and the host's own placeholder is an
-     * absolutely-positioned sibling (`.placeholder`, inset 4/8/auto/14) that is
-     * shown exactly while `draft === ''` — the very moment a prediction appears.
-     * It paints after the editor, so it covers the ghost completely. A hint on an
-     * empty draft can therefore never be visible.
-     *
-     * Instead this plugin owns one absolutely-positioned span inside the same
-     * relatively-positioned `.grow` wrapper. It is behind nothing, adds no editable
-     * node, and the draft text never contains it. The caret line's height and the
-     * left inset are mirrored from the host's own `.input` padding.
-     */
+    // Empty editors need a separate preview: their managed line break pushes the
+    // native ::after hint onto a second line. Draft continuations use native flow.
     const GHOST_CLASS = 'composer-assist-ghost'
     const GHOST_STYLE_ID = 'composer-assist-ghost-style'
 
@@ -232,23 +223,27 @@ window.__ModuleLoader__.load({
       style.id = GHOST_STYLE_ID
       style.textContent = `
 .${GHOST_CLASS} {
-  position: absolute;
-  left: 14px;
-  right: 8px;
-  top: 4px;
+  grid-area: 1 / 1;
+  min-width: 0;
+  margin: 4px 8px 4px 14px;
   pointer-events: none;
   user-select: none;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  color: var(--dsw-alias-label-caption);
-  opacity: 0.75;
+  color: var(--dsw-alias-label-secondary);
+}
+[data-composer-input][data-composer-assist-continuation] p:last-child::after {
+  color: var(--dsw-alias-label-secondary);
+  opacity: 1;
 }
 .${GHOST_CLASS}[hidden] { display: none; }
 /* The host's own placeholder occupies the same line and inset; showing both
    stacks two sentences on one baseline. While a ghost is visible it stands in
    for the placeholder. */
-.grow:has(> .${GHOST_CLASS}:not([hidden])) [data-composer-placeholder] { display: none; }
+[data-composer-card] :has(> .${GHOST_CLASS}:not([hidden])) { display: grid; }
+[data-composer-card] :has(> .${GHOST_CLASS}:not([hidden])) > [data-composer-input] { grid-area: 1 / 1; }
+[data-composer-card] :has(> .${GHOST_CLASS}:not([hidden])) > [data-composer-placeholder] { display: none; }
 `
       document.head.appendChild(style)
     }
@@ -261,7 +256,7 @@ window.__ModuleLoader__.load({
         ?? undefined
     }
 
-    /** The element whose absolutely-positioned children sit over the editor. */
+    /** The wrapper shared by the editor, placeholder, and empty-draft preview. */
     function ghostHostFor(element) {
       const grow = element?.parentElement
       return grow === null || grow === undefined ? undefined : grow
@@ -282,15 +277,27 @@ window.__ModuleLoader__.load({
       return span
     }
 
-    /** Show, update, or hide the ghost. An empty string hides it without removing it. */
-    function paintGhost(element, text) {
-      const span = element === undefined ? undefined : ghostSpanFor(element)
-      if (span === undefined || span === null) return
-      if (text === '') {
-        span.hidden = true
-        span.textContent = ''
+    const ownedHints = new Map()
+
+    /** Empty drafts use an overlay; continuations use the editor's own text flow. */
+    function paintGhost(element, text, continuation = false) {
+      clearGhosts()
+      if (element === undefined || text === '') return
+      const existing = getComputedStyle(element).getPropertyValue('--dsh-composer-hint').trim()
+      if (existing !== '' && existing !== '""') return
+      if (continuation) {
+        const value = `"${CSS.escape(text)}"`
+        ownedHints.set(element, {
+          value,
+          previous: element.style.getPropertyValue('--dsh-composer-hint'),
+          priority: element.style.getPropertyPriority('--dsh-composer-hint'),
+        })
+        element.style.setProperty('--dsh-composer-hint', value)
+        element.setAttribute('data-composer-assist-continuation', '')
         return
       }
+      const span = ghostSpanFor(element)
+      if (span === undefined || span === null) return
       span.textContent = text
       span.hidden = false
     }
@@ -358,6 +365,14 @@ window.__ModuleLoader__.load({
     /** Hide every ghost this plugin owns (unmount, mode switch, no suggestion). */
     function clearGhosts() {
       if (typeof document === 'undefined') return
+      for (const [element, hint] of ownedHints) {
+        element.removeAttribute('data-composer-assist-continuation')
+        if (element.style.getPropertyValue('--dsh-composer-hint') === hint.value) {
+          if (hint.previous !== '') element.style.setProperty('--dsh-composer-hint', hint.previous, hint.priority)
+          else element.style.removeProperty('--dsh-composer-hint')
+        }
+      }
+      ownedHints.clear()
       for (const span of document.querySelectorAll(`.${GHOST_CLASS}`)) {
         span.hidden = true
         span.textContent = ''
@@ -367,6 +382,7 @@ window.__ModuleLoader__.load({
     /** Drop the injected stylesheet and every ghost span; called once on unload. */
     function disposeGhosts() {
       if (typeof document === 'undefined') return
+      clearGhosts()
       for (const span of document.querySelectorAll(`.${GHOST_CLASS}`)) span.remove()
       document.getElementById(GHOST_STYLE_ID)?.remove()
     }
@@ -410,7 +426,37 @@ window.__ModuleLoader__.load({
      * a component instance: switching conversations unmounts the strip and a fresh
      * `useRef` would restart at zero, marking the pending result stale.
      */
-    const requestSeqBySession = new Map()
+    const sessionStorageKey = 'dsh.composer-assist.predictions.v1'
+    function restoreSessionState() {
+      const state = {
+        requests: new Map(), suggestions: new Map(), candidates: new Map(),
+        pending: new Set(), listeners: new Set(),
+      }
+      try {
+        const entries = JSON.parse(sessionStorage.getItem(sessionStorageKey) ?? '[]')
+        if (!Array.isArray(entries)) return state
+        for (const entry of entries.slice(-8)) {
+          if (!Array.isArray(entry)) continue
+          const [id, record, index] = entry
+          if (typeof id !== 'string' || record === null || typeof record !== 'object'
+            || !['next', 'complete'].includes(record.kind) || typeof record.text !== 'string'
+            || record.text === '' || typeof record.draftAt !== 'string') continue
+          const candidates = Array.isArray(record.candidates)
+            ? record.candidates.filter(text => typeof text === 'string' && text !== '').slice(0, 3) : []
+          state.suggestions.set(id, {
+            kind: record.kind, text: record.text, draftAt: record.draftAt, candidates,
+            confidence: Number.isFinite(record.confidence) && record.confidence >= 0 && record.confidence <= 1
+              ? record.confidence : null,
+          })
+          state.candidates.set(id, Number.isSafeInteger(index) && index >= 0
+            ? Math.min(index, Math.max(1, candidates.length) - 1) : 0)
+        }
+      } catch { /* Storage can be unavailable; retain predictions in memory. */ }
+      return state
+    }
+    const sessionStateKey = Symbol.for('dsh.composer-assist.session-state')
+    const sessionState = window[sessionStateKey] ??= restoreSessionState()
+    const requestSeqBySession = sessionState.requests
 
     /** Next request id for one session. */
     function nextRequestId(sessionId) {
@@ -430,23 +476,23 @@ window.__ModuleLoader__.load({
      * changes, so component state alone loses the prediction on every switch.
      * Keyed by session id and pruned to a few entries.
      */
-    const suggestionBySession = new Map()
+    const suggestionBySession = sessionState.suggestions
 
     /**
      * Which candidate of the stored suggestion is currently shown, per session.
      * Kept separate from the suggestion because switching it is a UI action that
      * must survive a conversation switch just like the suggestion itself.
      */
-    const candidateIndexBySession = new Map()
+    const candidateIndexBySession = sessionState.candidates
 
     /** Monotonic instance counter for mount/unmount tracing. */
     let instanceSeq = 0
 
     /** Sessions whose prediction is currently generating. */
-    const pendingBySession = new Set()
+    const pendingBySession = sessionState.pending
 
     /** Notified whenever any session's stored suggestion changes. */
-    const storeListeners = new Set()
+    const storeListeners = sessionState.listeners
 
     /** Subscribe to store changes; returns the unsubscribe. */
     function onStoreChange(listener) {
@@ -456,6 +502,11 @@ window.__ModuleLoader__.load({
 
     /** Notify every subscriber after a store mutation. */
     function publishStore() {
+      try {
+        sessionStorage.setItem(sessionStorageKey, JSON.stringify(
+          [...suggestionBySession].map(([id, record]) => [id, record, candidateIndexBySession.get(id) ?? 0]),
+        ))
+      } catch { /* Storage can be unavailable; retain predictions in memory. */ }
       for (const listener of [...storeListeners]) { try { listener() } catch { /* one bad subscriber */ } }
     }
 
@@ -694,7 +745,7 @@ window.__ModuleLoader__.load({
       useEffect(() => {
         if (!enabled || (mode !== 'word' && mode !== 'both')) return
         if (draft.trim() === '') return
-        if (pending !== null && pending.draftAt === draft) return
+        if (suggestionBySession.get(sessionId)?.draftAt === draft) return
         const timer = setTimeout(() => { void ask('complete', draft, 'typing') }, settings?.debounceMs ?? 600)
         return () => { clearTimeout(timer) }
       }, [draft, enabled, mode, sessionId, settings?.debounceMs])
@@ -781,7 +832,10 @@ window.__ModuleLoader__.load({
       }, [pending])
 
       const inline = settings?.display === 'inline'
-      const ghost = !enabled || pending === null ? '' : currentCandidate(sessionId)
+      const continuation = pending?.kind === 'complete' && pending.draftAt === draft && draft !== ''
+      const ghost = enabled && pending !== null
+        && ((pending.kind === 'next' && draft === '') || continuation)
+        ? currentCandidate(sessionId) : ''
 
       // The ghost lives over the composer surface, not in this component's tree, so
       // it is reconciled on every relevant change and released on unmount.
@@ -790,10 +844,10 @@ window.__ModuleLoader__.load({
         ensureGhostStyle()
         const element = composerInputElement()
         if (element === undefined) return undefined
-        paintGhost(element, ghost)
+        paintGhost(element, ghost, continuation)
         reportProbe({ phase: 'paint', ghost })
         return undefined
-      }, [ghost, inline, sessionId])
+      }, [ghost, inline, sessionId, continuation])
       useEffect(() => () => { clearGhosts() }, [])
 
       // Record the render decision: this is the only place that can explain a bar
@@ -829,8 +883,12 @@ window.__ModuleLoader__.load({
 
       // Standalone suggestion bar above the composer. Its own element and its own
       // line, so it can never collide with the composer placeholder.
-      return h('div', { style: stripStyle, role: 'status', 'aria-live': 'polite', 'data-composer-assist-bar': '' },
-        h('span', { style: stripBadge }, badge),
+      return h('div', { style: inline ? {
+        ...stripStyle, padding: '2px 4px', marginBottom: '4px',
+        border: 'none', borderLeft: 'none', borderRadius: 0,
+        background: 'transparent', boxShadow: 'none',
+      } : stripStyle, role: 'status', 'aria-live': 'polite', 'data-composer-assist-bar': '' },
+        h('span', { style: stripBadge }, inline && ghost !== '' ? t('strip.preview') : badge),
         confidenceText !== null && h('span', {
           style: {
             flex: '0 0 auto', fontSize: '10px', fontWeight: '600',
@@ -838,8 +896,12 @@ window.__ModuleLoader__.load({
             paddingTop: '2px', whiteSpace: 'nowrap',
           },
         }, confidenceText),
-        h('span', { style: stripText }, pending !== null ? text : ''),
+        h('span', { style: inline && ghost !== '' ? {
+          ...stripText, position: 'absolute', width: '1px', height: '1px',
+          overflow: 'hidden', clipPath: 'inset(50%)',
+        } : stripText }, pending !== null ? text : ''),
         counter !== '' && h('span', { style: stripBadge }, counter),
+        inline && total > 1 && draft === '' && h('span', { style: stripBadge }, t('strip.cycle')),
         h('span', { style: stripActions },
           pending !== null && h('button', {
             type: 'button',

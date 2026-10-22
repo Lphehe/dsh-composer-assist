@@ -83,9 +83,17 @@ The confidence on the bar is the model's own rough self-assessment, shown only a
 
 ## 实现说明 · Implementation notes
 
-`display: inline`（行内模式）在输入框所在的相对定位容器里插入一个自己的绝对定位 ghost，并临时隐藏宿主占位符——宿主的 `--dsh-composer-hint` 画在占位符之后，空草稿时会被占位符盖住，所以本插件不用它。该模式依赖宿主的 `[data-composer-card]` / `[data-composer-input]` 标记；DSH 升级后若标记改名，行内 ghost 会静默不再显示（不报错、不污染草稿）。默认的 `bar` 模式不依赖宿主内部标记，只使用主题变量。
+`display: inline`（行内模式）在空草稿上显示一个非编辑预览，与编辑器共享网格区域并隐藏 placeholder；换行会撑开输入区域。草稿补全复用宿主的 `--dsh-composer-hint`，跟随文字末尾排版。继续编辑使原建议与草稿不匹配时，行内预览隐藏，候选仍保留在建议栏。接受、切换会话或退出行内模式时会清理插件拥有的提示。
 
-The `display: inline` mode inserts its own absolutely-positioned ghost into the composer's positioned container and hides the host placeholder while it shows — the host's `--dsh-composer-hint` paints after the placeholder, which is exactly what covers it on an empty draft, so this plugin does not use it. That mode relies on the host's `[data-composer-card]` / `[data-composer-input]` markers; if a DSH upgrade renames them, the inline ghost silently stops showing — no error, no draft corruption. The default `bar` mode uses only theme variables and no host-internal markers.
+Inline mode shows a non-editable preview over an empty editor, shares its grid area, and hides the placeholder; wrapped text expands the input area. Draft continuations use the host's `--dsh-composer-hint` at the end of the text. Editing a draft hides a mismatched inline preview while keeping the candidate in the suggestion bar. Accepting, switching sessions, or leaving inline mode clears the plugin's own hints.
+
+预览使用清晰的灰色，常显「预览 · 未填入草稿」与键盘提示；只有 Tab 或接受按钮会填入草稿。候选和选中位置按会话保存在标签页会话存储中，切换会话、重载插件或刷新后会恢复；关闭标签页会清空这份缓存。生成中状态保留在当前页面内存中，正常切换会话不会丢失。
+
+Readable gray text and visible preview/keyboard hints distinguish suggestions from the draft; only Tab or the accept button inserts them. Per-session candidates and selection survive session switches, plugin reloads, and page refreshes in tab session storage. Closing the tab clears this cache. In-flight state lives in page memory and survives normal session switches.
+
+行内显示依赖宿主的 `[data-composer-card]` / `[data-composer-input]` 标记及原生提示样式；DSH 升级改名后需要适配。Tab 接受也依赖消息输入框标记，以免搜索等其他输入框误接受候选。
+
+Inline rendering relies on the host's composer markers and native hint styles, which may need adapting after a DSH upgrade. Tab acceptance also checks the message-editor marker so other editable fields, such as search, cannot accept a candidate.
 
 ## 成本提醒 · Cost warning
 
