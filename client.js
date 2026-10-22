@@ -29,8 +29,10 @@ window.__ModuleLoader__.load({
       'strip.thinking': '正在生成…',
       'strip.failed': '生成失败',
       'predict.again': '重新预测输入框',
+      'predict.short': '预测',
       'predict.title': '预测输入框',
       'predict.busy': '预测中…',
+      'polish.short': '润色',
       'polish.title': '润色提示词',
       'polish.busy': '润色中…',
       'polish.failed': '润色失败',
@@ -86,8 +88,10 @@ window.__ModuleLoader__.load({
       'strip.thinking': 'Generating…',
       'strip.failed': 'Generation failed',
       'predict.again': 'Predict input again',
+      'predict.short': 'Predict',
       'predict.title': 'Predict input',
       'predict.busy': 'Predicting…',
+      'polish.short': 'Polish',
       'polish.title': 'Polish prompt',
       'polish.busy': 'Polishing…',
       'polish.failed': 'Polish failed',
@@ -982,18 +986,18 @@ window.__ModuleLoader__.load({
         title: label,
         'aria-label': label,
         style: {
-          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
           cursor: busy ? 'default' : 'pointer',
           border: '1px solid var(--dsw-alias-border-l1)',
           background: 'transparent',
           color: 'var(--dsw-alias-label-secondary)',
-          borderRadius: '8px', padding: '4px 10px',
-          fontSize: '12px', fontWeight: '600', lineHeight: '1.6',
+          borderRadius: '6px', padding: '2px 6px', minHeight: '24px',
+          fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
           whiteSpace: 'nowrap',
           opacity: busy ? '0.6' : '1',
         },
-      }, busy ? [h('span', { key: 'dot', 'aria-hidden': true }, '\u22ef'), h('span', { key: 'label' }, label)]
-        : [h('span', { key: 'icon', 'aria-hidden': true }, '\u2192'), h('span', { key: 'label' }, label)])
+      }, [h('span', { key: 'icon', 'aria-hidden': true }, busy ? '\u22ef' : '\u2192'),
+        h('span', { key: 'label' }, t('predict.short'))])
     }
 
     /** ✨ button in the composer tool row; rewrites the current draft into it. */
@@ -1025,19 +1029,19 @@ window.__ModuleLoader__.load({
         title: failed ? t('polish.failed') : busy ? t('polish.busy') : t('polish.title'),
         'aria-label': t('polish.title'),
         style: {
-          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
           cursor: idle ? 'pointer' : 'default',
           // Idle is brand-tinted and readable; disabled stays visible but clearly inert.
           border: idle ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-l1)',
           background: idle ? 'var(--dsw-alias-bg-layer-1)' : 'transparent',
           color: failed ? 'var(--dsw-alias-state-error-primary)'
             : idle ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
-          borderRadius: '8px', padding: '4px 10px',
-          fontSize: '12px', fontWeight: '600', lineHeight: '1.6',
+          borderRadius: '6px', padding: '2px 6px', minHeight: '24px',
+          fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
           whiteSpace: 'nowrap',
         },
-      }, busy ? t('polish.busy')
-        : [h('span', { key: 'icon', 'aria-hidden': true }, '✨'), h('span', { key: 'label' }, t('polish.title'))])
+      }, [h('span', { key: 'icon', 'aria-hidden': true }, busy ? '\u22ef' : '✨'),
+        h('span', { key: 'label' }, t('polish.short'))])
     }
 
     /** Full settings page in the left nav: switch, mode, model, and the numbers. */
