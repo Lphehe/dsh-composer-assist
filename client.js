@@ -5,7 +5,7 @@
  * source a future upgrade reads.
  */
 window.__ModuleLoader__.load({
-  id: 'dsh-composer-assist',
+  id: '@local/composer-assist',
   factory(require) {
     const React = require('react')
     const h = React.createElement

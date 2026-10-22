@@ -1,5 +1,5 @@
 {
-  "name": "dsh-composer-assist",
+  "name": "@local/composer-assist",
   "version": "0.1.0",
   "type": "module",
   "description": "Composer prediction for DeepSeek Harness: predicts the next message above the input box, completes a draft, and polishes prompts.",
@@ -32,13 +32,5 @@
       ]
     }
   },
-  "private": false,
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lphehe-bot/dsh-composer-assist.git"
-  },
-  "homepage": "https://github.com/lphehe-bot/dsh-composer-assist",
-  "bugs": {
-    "url": "https://github.com/lphehe-bot/dsh-composer-assist/issues"
-  }
+  "private": true
 }
