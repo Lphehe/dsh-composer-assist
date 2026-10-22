@@ -1,65 +1,91 @@
-# 输入框预测 (Composer prediction)
+# 输入框预测 · Composer prediction
 
-DeepSeek Harness（DSH）桌面端插件：在输入框上方预测你下一步想输入的内容、补全草稿，并可一键润色提示词。
+> **中文**：根据当前对话和你说话的方式，在输入框上方给出你下一条最可能发的消息，按 Tab 即可采用；同时支持输入时补全草稿、一键润色提示词。
+>
+> **English**: Predicts your next message in the DSH composer, based on your conversation and how you talk to it. Press Tab to take it. It also completes a draft as you type and rewrites a prompt for clarity on demand.
 
-## 功能
+<p align="center">
+  <img src="screenshots/composer-bar.png" alt="建议栏显示在输入框上方" width="720">
+</p>
+<p align="center"><sub>输入框上方的独立建议栏，与输入框同宽对齐</sub></p>
 
-| 功能 | 说明 |
+<p align="center">
+  <img src="screenshots/settings.png" alt="设置页" width="560">
+</p>
+<p align="center"><sub>设置 → 输入框预测</sub></p>
+
+## 功能 · Features
+
+| 中文 | English |
 |---|---|
-| 自动预测 | 一轮回答结束后，在输入框上方生成一条最可能的下一条消息 |
-| 手动预测 | 点输入框工具行的「预测输入框」按钮随时生成 |
-| 草稿补全 | 输入时补全后半句（可关闭） |
-| 润色提示词 | 一键把当前草稿改写成更清晰的指令 |
-
-建议以**独立建议栏**显示在输入框上方（默认，与输入框同宽对齐），也可切换为输入框内的行内 ghost 文本或卡片样式。
+| 自动预测 | Predicts the next message after each finished turn |
+| 手动预测 | Predict on demand from the composer tool row |
+| 草稿补全 | Completes the second half of a draft as you type |
+| 润色提示词 | Rewrites the current draft into a clearer instruction |
 
 按 **Tab** 接受建议（填进草稿但不发送），**Esc** 隐藏，「忽略」按钮则永久丢弃。
+Tab accepts a suggestion (fills the draft, does not send); Esc hides it; the dismiss button forgets it.
 
-## 安装
+## 安装 · Install
 
 ```bash
-git clone https://github.com/lphehe-bot/dsh-composer-prediction.git ~/.dsh/local/composer-prediction
+git clone https://github.com/lphehe-bot/dsh-composer-assist.git ~/.dsh/local/composer-assist
 ```
 
-然后用 `plugin_manager` 把该目录作为 bundle 安装：
+再用 `plugin_manager` 把该目录作为 bundle 安装：
+Then install the directory as a bundle with `plugin_manager`:
 
 ```
-plugin_manager install_bundle  target: ~/.dsh/local/composer-prediction
+plugin_manager install_bundle  target: ~/.dsh/local/composer-assist
 ```
 
-## 设置
+仓库声明了 `dsh.bundle` manifest，因此也可以直接：
+The repo declares a `dsh.bundle` manifest, so it also works directly:
 
-设置 → **输入框预测**：
+```
+dsh plugin add lphehe-bot/dsh-composer-assist
+```
 
-| 项 | 说明 |
+## 设置 · Settings
+
+设置 → **输入框预测** · Settings → **Composer prediction**
+
+| 中文 | English |
 |---|---|
-| 启用 | 总开关；关闭后行为与未安装一致 |
-| 模式 | 自动（每轮回答后）/ 单词补全（输入时）/ 两者都要 / 仅手动 |
-| 显示位置 | 输入框上方建议栏（推荐）/ 输入框内行内 / 卡片 |
-| 预测模型 | 留空则跟随本会话上次真实使用的模型 |
-| 输出上限 | 建议的 token 上限 |
-| 输入停顿 | 单词补全等多久才发请求 |
-| 超时 | 超时后静默丢弃，不打扰输入 |
-| 上下文上限 | 发给模型的历史字符数 |
+| 启用 | Enable |
+| 模式：自动 / 单词补全 / 两者 / 仅手动 | Mode: auto / word / both / manual only |
+| 显示位置：建议栏 / 行内 / 卡片 | Display: bar above the box / inline / card |
+| 预测模型（留空则跟随本会话） | Predict model (blank follows the session) |
+| 输出上限 / 输入停顿 / 超时 / 上下文上限 | Output cap / debounce / timeout / context cap |
 
 设置存于 `$DSH_HOME/composer-assist/settings.json`。
+Settings live in `$DSH_HOME/composer-assist/settings.json`.
 
-## 设计要点
+## 设计要点 · Design notes
 
-- **不写会话日志**：预测是 `ctx.llm.prepareCall()` 的辅助调用，不进入对话历史，也不会在聊天里长出额外行。
-- **每轮只预测一次**：Host 侧监听 `agent/turn-stopping` 记账；预测请求自身产生的 turn 事件会被过滤，并按 turn 号去重，避免自触发循环。
+- **不写会话日志**：预测是 `ctx.llm.prepareCall()` 的辅助调用，不进入对话历史。
+  **Never writes to the session log**: prediction is an auxiliary `ctx.llm.prepareCall()` call.
+- **每轮只预测一次**：Host 侧监听 `agent/turn-stopping` 记账；预测自身产生的 turn 事件会被过滤，并按 turn 号去重。
+  **Exactly one prediction per finished turn**: the Host records `agent/turn-stopping`, filters the prediction's own turn events, and deduplicates by turn number.
 - **打字不触发**：轮询不依赖草稿内容，键击不会重启轮询或消耗 turn。
+  **Typing never triggers it**: polling does not depend on draft content, and keystrokes neither restart the poll nor consume a turn.
 - **建议跟着会话走**：建议与「生成中」状态都按会话保存在模块级存储，切换对话再切回不会丢失。
-- **不抢宿主的命令提示**：行内模式会避让宿主的 `--dsh-composer-hint`，并在建议可见时隐藏占位符。
+  **Suggestions belong to their conversation**: both the suggestion and the generating state are kept per session in a module-level store, so switching away and back does not lose them.
+- **不抢宿主的命令提示**：行内模式会避让宿主的 `--dsh-composer-hint`。
+  **Does not steal the host's hint**: inline mode avoids the host's `--dsh-composer-hint`.
 
-## 实现说明（借用宿主 CSS）
+## 实现说明 · Implementation notes
 
 `display: inline`（行内模式）依赖宿主的 `.input p:last-child::after` 与 `--dsh-composer-hint` 约定。DSH 升级后若该规则改变，行内 ghost 会静默不再显示（不会报错、不会污染草稿）。默认的 `bar` 模式不依赖宿主内部类名，只使用主题变量。
 
-## 成本提醒
+The `display: inline` mode depends on the host's `.input p:last-child::after` and `--dsh-composer-hint` convention. If that rule changes after a DSH upgrade, the inline ghost silently stops showing — no error, no draft corruption. The default `bar` mode uses only theme variables and no host-internal class names.
+
+## 成本提醒 · Cost warning
 
 **每次预测都是一次真实计费的模型调用。** 默认开启自动模式，即每轮回答后一次调用。可在设置中改为「仅手动」或直接关闭。
 
-## 许可证
+**Every prediction is a real, billed model call.** With auto mode on, that is one call after each finished turn. Switch to manual-only, or turn the plugin off, in the settings page.
+
+## 许可证 · License
 
 MIT
