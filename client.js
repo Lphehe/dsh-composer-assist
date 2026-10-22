@@ -1212,14 +1212,15 @@ window.__ModuleLoader__.load({
         // The painted ghost outlives the component, so unloading must release it.
         ctx.effect(() => () => { disposeGhosts() }, 'composer-assist: release inline ghost')
 
-        // Tab accepts only on an editable target outside any modal, and only when a
-        // suggestion is actually pending; everything else passes through untouched.
+        // Tab accepts only in the message editor, never in another editable field.
         ctx.effect(() => ctx.shortcuts.observeFixedInput((input) => {
           if (input.type !== 'keydown') return
           if (input.gesture.code !== 'Tab') return
           if (input.gesture.shift || input.gesture.control || input.gesture.alt || input.gesture.meta) return
           if (input.gesture.composing || input.gesture.defaultPrevented) return
           if (input.context.region !== 'editable' || input.context.modal !== null) return
+          const focused = document.activeElement
+          if (!(focused instanceof Element) || focused.closest('[data-composer-input]') === null) return
           if (acceptRef.current?.() !== true) return
           input.consume()
         }), 'composer-assist: Tab accepts a prediction')
