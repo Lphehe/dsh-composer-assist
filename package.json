@@ -2,7 +2,7 @@
   "name": "dsh-composer-assist",
   "version": "0.1.0",
   "type": "module",
-  "description": "Composer prediction for DeepSeek Harness: predicts the next message above the input box, completes a draft, and polishes prompts.",
+  "description": "Context-aware composer predictions for DeepSeek Harness, with draft completion, prompt polishing, per-session suggestions and stale-response protection.",
   "license": "MIT",
   "exports": {
     ".": "./index.js",
