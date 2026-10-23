@@ -1,6 +1,6 @@
 {
   "name": "dsh-composer-assist",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "type": "module",
   "description": "Context-aware composer predictions for DeepSeek Harness, with draft completion, prompt polishing, per-session suggestions and stale-response protection.",
   "license": "SEE LICENSE IN LICENSE",
@@ -35,10 +35,10 @@
   "private": false,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/lphehe-bot/dsh-composer-assist.git"
+    "url": "git+https://github.com/Lphehe/dsh-composer-assist.git"
   },
-  "homepage": "https://github.com/lphehe-bot/dsh-composer-assist",
+  "homepage": "https://github.com/Lphehe/dsh-composer-assist",
   "bugs": {
-    "url": "https://github.com/lphehe-bot/dsh-composer-assist/issues"
+    "url": "https://github.com/Lphehe/dsh-composer-assist/issues"
   }
 }

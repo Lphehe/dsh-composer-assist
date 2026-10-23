@@ -28,23 +28,29 @@ Tab accepts a suggestion (fills the draft, does not send); Esc hides it; the dis
 
 ## 安装 · Install
 
+推荐安装预打包的 v0.1.1，不需要源码构建。在 Harness 中让助手使用 `plugin_manager install_bundle` 安装这个 URL：
+Install the prepacked v0.1.1 archive with Harness's `plugin_manager install_bundle`; no source build is required:
+
+```
+https://github.com/Lphehe/dsh-composer-assist/releases/download/v0.1.1/dsh-composer-assist.tgz
+```
+
+普通 CLI profile 可按下面的示例安装（将 `web` 换成你的 profile 名；Desktop 请使用插件管理器）：
+For a regular CLI profile, replace `web` with your profile name; use Plugin Manager for Desktop:
+
 ```bash
-git clone https://github.com/lphehe-bot/dsh-composer-assist.git ~/.dsh/local/composer-assist
+dsh plugin --profile web add https://github.com/Lphehe/dsh-composer-assist/releases/download/v0.1.1/dsh-composer-assist.tgz
 ```
 
-再用 `plugin_manager` 把该目录作为 bundle 安装：
-Then install the directory as a bundle with `plugin_manager`:
+也可克隆仓库，再让 `plugin_manager install_bundle` 安装克隆目录的绝对路径：
+Alternatively, clone the repository and install its absolute directory path with `plugin_manager install_bundle`:
 
-```
-plugin_manager install_bundle  target: ~/.dsh/local/composer-assist
+```bash
+git clone https://github.com/Lphehe/dsh-composer-assist.git
 ```
 
-仓库声明了 `dsh.bundle` manifest，因此也可以直接：
-The repo declares a `dsh.bundle` manifest, so it also works directly:
-
-```
-dsh plugin add lphehe-bot/dsh-composer-assist
-```
+v0.1.1 沿用 0.1 系列输入预测功能，本次更新许可与分发；不包含开发中的 ZCode 动态工作流。
+v0.1.1 retains the 0.1-series composer features and updates licensing/distribution; it does not include the in-development ZCode dynamic workflows.
 
 ## 设置 · Settings
 
