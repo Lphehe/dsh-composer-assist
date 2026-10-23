@@ -22,6 +22,7 @@ window.__ModuleLoader__.load({
       'strip.preview': '预览 · 未填入草稿',
       'strip.cycle': '←/→ 切换候选',
       'strip.dismiss': '忽略',
+      'strip.draftChanged': '草稿已变化，请重新预测',
       'strip.confidence': '置信度',
       'strip.confidenceHigh': '较高',
       'strip.confidenceMedium': '中等',
@@ -81,6 +82,7 @@ window.__ModuleLoader__.load({
       'strip.preview': 'Preview · not inserted',
       'strip.cycle': '←/→ switch candidates',
       'strip.dismiss': 'Dismiss',
+      'strip.draftChanged': 'Draft changed; predict again',
       'strip.confidence': 'confidence',
       'strip.confidenceHigh': 'high',
       'strip.confidenceMedium': 'medium',
@@ -174,14 +176,17 @@ window.__ModuleLoader__.load({
       return body
     }
 
-    async function request(kind, sessionId, draft) {
+    async function request(kind, sessionId, draft, revision, source) {
       const response = await fetch(`${API}/suggest`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ kind, sessionId, draft }),
+        body: JSON.stringify({ kind, sessionId, draft, revision, source }),
       })
       const body = await response.json()
       if (body?.ok !== true) throw new Error(body?.error ?? 'failed')
+      if (body.sessionId !== sessionId || body.revision !== revision || typeof body.source !== 'string') {
+        return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
+      }
       const text = typeof body.text === 'string' ? body.text : ''
       // Surface the Host's own explanation; an empty string alone cannot be acted on.
       if (text === '' && body.reason !== undefined) {
@@ -196,7 +201,7 @@ window.__ModuleLoader__.load({
         : []
       if (candidates.length === 0 && text !== '') candidates.push(text)
       const confidence = Number.isFinite(body.confidence) && body.confidence >= 0 && body.confidence <= 1 ? body.confidence : null
-      return { text: candidates[0] ?? '', candidates, confidence }
+      return { text: candidates[0] ?? '', candidates, confidence, source: body.source }
     }
 
     /**
@@ -407,22 +412,30 @@ window.__ModuleLoader__.load({
     const listeners = new Set()
 
     /** A prediction request in flight, owned by the module (not a component). */
-    function runRequest(kind, sessionId, draft, cause) {
+    function runRequest(kind, sessionId, draft, cause, source) {
+      if (kind === 'complete' && hasDraftRequest(sessionId, draft)) return Promise.resolve(null)
       const id = nextRequestId(sessionId)
+      const revision = trackDraft(sessionId, draft).revision
+      pendingBySession.set(sessionId, { id, draft, revision })
+      publishStore()
       reportProbe({ phase: 'begin', trace: `req-${id}`, owner: sessionId, kind, cause })
-      return request(kind, sessionId, draft).then((result) => {
-        const stale = id !== currentRequestId(sessionId)
+      return request(kind, sessionId, draft, revision, source).then(async (result) => {
+        const stale = () => id !== currentRequestId(sessionId) || draftBySession.get(sessionId)?.revision !== revision
+        if (stale() || result.text === '') return null
+        const matches = await sourceMatches(sessionId, result.source)
         reportProbe({ phase: 'result', trace: `req-${id}`, kind,
-          textLength: result.text.length, stale, owner: sessionId, confidence: result.confidence })
-        if (result.text === '') return null
-        // `next` carries a candidate list and a confidence; the other kinds stay single.
+          textLength: result.text.length, stale: stale() || !matches, owner: sessionId, confidence: result.confidence })
+        if (stale() || !matches) return null
         const record = {
-          kind, text: result.text, draftAt: draft,
+          kind, text: result.text, draftAt: draft, source: result.source,
           candidates: result.candidates, confidence: result.confidence,
         }
-        if (!stale) rememberSuggestion(sessionId, record)
+        rememberSuggestion(sessionId, record)
         return record
-      }).catch(() => null)
+      }).catch(() => null).finally(() => {
+        if (pendingBySession.get(sessionId)?.id === id) pendingBySession.delete(sessionId)
+        publishStore()
+      })
     }
 
     /**
@@ -430,11 +443,11 @@ window.__ModuleLoader__.load({
      * a component instance: switching conversations unmounts the strip and a fresh
      * `useRef` would restart at zero, marking the pending result stale.
      */
-    const sessionStorageKey = 'dsh.composer-assist.predictions.v1'
+    const sessionStorageKey = 'dsh.composer-assist.predictions.v2'
     function restoreSessionState() {
       const state = {
         requests: new Map(), suggestions: new Map(), candidates: new Map(),
-        pending: new Set(), listeners: new Set(),
+        drafts: new Map(), pending: new Map(), listeners: new Set(),
       }
       try {
         const entries = JSON.parse(sessionStorage.getItem(sessionStorageKey) ?? '[]')
@@ -444,11 +457,11 @@ window.__ModuleLoader__.load({
           const [id, record, index] = entry
           if (typeof id !== 'string' || record === null || typeof record !== 'object'
             || !['next', 'complete'].includes(record.kind) || typeof record.text !== 'string'
-            || record.text === '' || typeof record.draftAt !== 'string') continue
+            || record.text === '' || typeof record.draftAt !== 'string' || typeof record.source !== 'string') continue
           const candidates = Array.isArray(record.candidates)
             ? record.candidates.filter(text => typeof text === 'string' && text !== '').slice(0, 3) : []
           state.suggestions.set(id, {
-            kind: record.kind, text: record.text, draftAt: record.draftAt, candidates,
+            kind: record.kind, text: record.text, draftAt: record.draftAt, candidates, source: record.source,
             confidence: Number.isFinite(record.confidence) && record.confidence >= 0 && record.confidence <= 1
               ? record.confidence : null,
           })
@@ -458,9 +471,30 @@ window.__ModuleLoader__.load({
       } catch { /* Storage can be unavailable; retain predictions in memory. */ }
       return state
     }
-    const sessionStateKey = Symbol.for('dsh.composer-assist.session-state')
+    const sessionStateKey = Symbol.for('dsh.composer-assist.session-state.v2')
     const sessionState = window[sessionStateKey] ??= restoreSessionState()
     const requestSeqBySession = sessionState.requests
+    const draftBySession = sessionState.drafts
+
+    function trackDraft(sessionId, draft) {
+      let state = draftBySession.get(sessionId)
+      if (state === undefined || state.draft !== draft) {
+        state = { draft, revision: (state?.revision ?? 0) + 1 }
+        draftBySession.set(sessionId, state)
+      }
+      return state
+    }
+
+    function hasDraftRequest(sessionId, draft) {
+      const active = pendingBySession.get(sessionId)
+      return active?.draft === draft && active.revision === draftBySession.get(sessionId)?.revision
+    }
+
+    async function sourceMatches(sessionId, source) {
+      const response = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`)
+      const body = await response.json()
+      return body.ok === true && typeof source === 'string' && body.source === source
+    }
 
     /** Next request id for one session. */
     function nextRequestId(sessionId) {
@@ -606,6 +640,10 @@ window.__ModuleLoader__.load({
     /** One suggestion strip: renders nothing when there is nothing to offer. */
     function SuggestionStrip({ sessionId, useInput, useSession, inputActions, settings, t }) {
       const draft = useInput(state => state.draft)
+      trackDraft(sessionId, draft)
+      const phase = useInput(state => state.phase)
+      const phaseRef = useRef(phase)
+      phaseRef.current = phase
       const blank = useSession(session => session.blank)
       // Drives poll cadence only; a turn boundary comes from the Host, never from this flag.
       const running = useSession(session => session.running)
@@ -656,8 +694,22 @@ window.__ModuleLoader__.load({
         setFailed(false)
         return onStoreChange(apply)
       }, [sessionId])
-      // Typing does NOT discard a suggestion: it stays until accepted, dismissed,
-      // superseded by a newer prediction, or the session changes.
+      // Draft edits keep completed candidates, but accepting still requires the exact draft.
+      useEffect(() => {
+        if (!enabled) return undefined
+        let stopped = false
+        const verify = async () => {
+          const stored = suggestionBySession.get(sessionId)
+          if (stored === undefined) return
+          try {
+            const matches = await sourceMatches(sessionId, stored.source)
+            if (!stopped && !matches && suggestionBySession.get(sessionId) === stored) rememberSuggestion(sessionId, null)
+          } catch { /* A failed read cannot prove that a cached suggestion is stale. */ }
+        }
+        void verify()
+        const timer = setInterval(() => { void verify() }, 5000)
+        return () => { stopped = true; clearInterval(timer) }
+      }, [sessionId, enabled, running, pending?.source])
 
       /**
        * @param via - 'accept' consumes it, 'dismiss' forgets it, 'hide' only hides it.
@@ -673,25 +725,15 @@ window.__ModuleLoader__.load({
         for (const listener of listeners) listener()
       }
 
-      const ask = async (kind, at, cause) => {
+      const ask = async (kind, at, cause, source) => {
         const owner = sessionId
         reportProbe({ phase: 'request', kind, cause: cause ?? 'unknown', draft: at, owner })
-        // Session-scoped, so the generating state survives a switch.
-        pendingBySession.add(owner)
-        publishStore()
-        setBusy(true); setFailed(false)
-        // The request and its store write belong to the MODULE: a session switch may
-        // unmount this strip while the request is in flight, and the result must
-        // still land where a later mount can read it.
-        const record = await runRequest(kind, owner, at, cause)
-        pendingBySession.delete(owner)
-        publishStore()
+        setFailed(false)
+        await runRequest(kind, owner, at, cause, source)
         if (sessionIdRef.current === owner) {
-          // An empty result means "nothing this time": keep whatever the store holds
-          // for this session instead of blanking the bar or flagging a failure.
           const stored = suggestionBySession.get(owner)
           setPending(stored === undefined ? null : { ...stored })
-          setBusy(false)
+          setBusy(pendingBySession.has(owner))
           for (const listener of listeners) listener()
         }
       }
@@ -724,10 +766,8 @@ window.__ModuleLoader__.load({
             const claim = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`)
             const claimed = await claim.json()
             if (claimed?.turn === null || claimed?.turn === undefined) return
-            if (blank) return
-            // Issued even if this instance unmounts next tick: ask() writes to the
-            // module store, which is what a later mount reads.
-            void ask('next', '', 'turn-end')
+            if (blank || draftRef.current !== '') return
+            void ask('next', '', 'turn-end', claimed.source)
           } catch { /* a missed poll just means no prediction for that turn */ }
         }
         void poll()
@@ -748,9 +788,11 @@ window.__ModuleLoader__.load({
       // Word completion: debounce the typed draft, never repeat an accepted line.
       useEffect(() => {
         if (!enabled || (mode !== 'word' && mode !== 'both')) return
-        if (draft.trim() === '') return
+        if (draft.trim() === '' || hasDraftRequest(sessionId, draft)) return
         if (suggestionBySession.get(sessionId)?.draftAt === draft) return
-        const timer = setTimeout(() => { void ask('complete', draft, 'typing') }, settings?.debounceMs ?? 600)
+        const timer = setTimeout(() => {
+          if (draftRef.current === draft && !hasDraftRequest(sessionId, draft)) void ask('complete', draft, 'typing')
+        }, settings?.debounceMs ?? 600)
         return () => { clearTimeout(timer) }
       }, [draft, enabled, mode, sessionId, settings?.debounceMs])
 
@@ -787,21 +829,33 @@ window.__ModuleLoader__.load({
 
       // Accept/Escape from the keyboard listener.
       useEffect(() => {
-        acceptRef.current = () => {
-          if (pending === null) return false
-          // Never accept a suggestion that the store says belongs to another session.
+        let accepting = false
+        const accept = () => {
           const stored = suggestionBySession.get(sessionId)
-          if (stored === null || stored === undefined) return false
-          // Accept whatever candidate is currently shown, not necessarily the first.
+          if (pending === null || stored === undefined || stored.draftAt !== draftRef.current
+            || phaseRef.current !== 'plain' || accepting) return false
+          const revision = draftBySession.get(sessionId)?.revision
           const text = currentCandidate(sessionId)
-          if (stored.kind === 'next') inputActions.setDraft(text)
-          else if (stored.kind === 'complete') inputActions.setDraft(`${draftRef.current}${text}`)
-          else inputActions.setDraft(text)
-          void recordFeedback('accept', text)
-          clear('accept')
+          accepting = true
+          void (async () => {
+            try {
+              if (!await sourceMatches(sessionId, stored.source)) {
+                if (suggestionBySession.get(sessionId) === stored) rememberSuggestion(sessionId, null)
+                return
+              }
+              if (acceptRef.current !== accept || sessionIdRef.current !== sessionId || suggestionBySession.get(sessionId) !== stored
+                || draftBySession.get(sessionId)?.revision !== revision || draftRef.current !== stored.draftAt
+                || phaseRef.current !== 'plain') return
+              inputActions.setDraft(stored.kind === 'complete' ? `${stored.draftAt}${text}` : text)
+              void recordFeedback('accept', text)
+              clear('accept')
+            } catch { /* Never overwrite a draft when its source cannot be verified. */ }
+            finally { accepting = false }
+          })()
           return true
         }
-        return () => { acceptRef.current = undefined }
+        acceptRef.current = accept
+        return () => { if (acceptRef.current === accept) acceptRef.current = undefined }
       }, [pending, inputActions])
 
       useEffect(() => {
@@ -910,9 +964,12 @@ window.__ModuleLoader__.load({
           pending !== null && h('button', {
             type: 'button',
             onClick: () => { acceptRef.current?.() },
-            title: total > 1 ? t('strip.acceptHint') : t('strip.accept'),
+            disabled: pending.draftAt !== draft,
+            title: pending.draftAt !== draft ? t('strip.draftChanged')
+              : total > 1 && draft === '' ? t('strip.acceptHint') : t('strip.accept'),
             style: {
-              cursor: 'pointer', border: 'none',
+              opacity: pending.draftAt !== draft ? '0.5' : '1',
+              cursor: pending.draftAt !== draft ? 'default' : 'pointer', border: 'none',
               background: 'var(--dsw-alias-brand-primary)',
               color: 'var(--dsw-alias-bg-base)',
               borderRadius: '6px', padding: '3px 12px',
@@ -1004,21 +1061,30 @@ window.__ModuleLoader__.load({
     function PolishButton({ sessionId, useInput, inputActions, t }) {
       const draft = useInput(state => state.draft)
       const phase = useInput(state => state.phase)
+      trackDraft(sessionId, draft)
+      const live = useRef({ sessionId, draft, phase })
+      live.current = { sessionId, draft, phase }
+      const mounted = useRef(true)
+      useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
       const [busy, setBusy] = useState(false)
       const [failed, setFailed] = useState(false)
       const idle = draft.trim() !== '' && phase === 'plain' && !busy
 
       const run = async () => {
         if (!idle) return
+        const id = nextRequestId(sessionId)
+        const revision = draftBySession.get(sessionId).revision
+        const unchanged = () => mounted.current && live.current.sessionId === sessionId
+          && live.current.draft === draft && live.current.phase === 'plain'
+          && draftBySession.get(sessionId)?.revision === revision && currentRequestId(sessionId) === id
         setBusy(true); setFailed(false)
         try {
-          // `request` answers with a record; polish only needs its text.
-          const { text } = await request('polish', sessionId, draft)
-          if (text !== '') inputActions.setDraft(text)
+          const { text, source } = await request('polish', sessionId, draft, revision)
+          if (text !== '' && unchanged() && await sourceMatches(sessionId, source) && unchanged()) inputActions.setDraft(text)
         } catch {
-          setFailed(true)
+          if (unchanged()) setFailed(true)
         } finally {
-          setBusy(false)
+          if (mounted.current) setBusy(false)
         }
       }
 

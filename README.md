@@ -81,6 +81,15 @@ The confidence on the bar is the model's own rough self-assessment, shown only a
 - **工作区上下文只给名字**：工作目录顶层文件名与 git 分支/改动列表会随提示词一起发送，经宿主 `fs` / `subprocess` provider 读取。不读文件内容，过滤常见凭据类文件名；目录最多扫描 200 项、发送 8 个文件名和 20 行 git 状态，缺失或超时不阻断预测。
   **Workspace context is names only**: top-level file names plus the git branch and changed-file list ride along with the prompt through the Host `fs` / `subprocess` providers. No file contents are read; common credential-shaped names are filtered. Scanning is capped at 200 entries, with 8 names and 20 git status lines sent; missing context or a timeout does not fail the prediction.
 
+### 上下文与过期保护 · Context and stale-result protection
+
+- 在现有对话历史字符预算内（不含当前草稿及工作区摘要），优先最新用户请求及回答、较早用户约束，再加入最近最多四条工具文本证据（带工具名、错误标记和截断标记）。不复制隐藏推理、图片、附件、工具参数或整个系统提示词；工具证据不作为指令。
+- 预测只给有依据的 1～3 条候选，不强求数量、不新增授权或任务；不确定时可以不给建议。空结果不会清除已有有效候选。
+- 请求绑定会话、当前消息视图边界和草稿修订。来源变化、乱序结果或期间改稿的请求不能写入候选；接受前再核对来源，草稿变化时接受按钮禁用。润色期间的新输入也不会被旧结果覆盖。
+- 已完成候选仍按会话缓存；旧版无来源缓存不会恢复。只读上下文来自 DSH 的 `Session.deriveMessages()`，不是完整模型请求快照；不创建活跃预测子会话。
+
+Within the existing character budget, recent user requests/answers and older user constraints take priority, followed by up to four bounded textual tool results. Hidden reasoning, attachments, tool arguments, and system prompts are not copied. Predictions offer 1–3 grounded candidates or abstain. Session/source/draft-revision checks reject outdated responses; acceptance rechecks the source and never overwrites an edited draft. Polishing also protects intervening edits. Completed candidates remain session-local; legacy entries without a source are discarded. This uses the read-only message view, not a full model-request snapshot or an active fork.
+
 ## 实现说明 · Implementation notes
 
 `display: inline`（行内模式）在空草稿上显示一个非编辑预览，与编辑器共享网格区域并隐藏 placeholder；换行会撑开输入区域。草稿补全复用宿主的 `--dsh-composer-hint`，跟随文字末尾排版。继续编辑使原建议与草稿不匹配时，行内预览隐藏，候选仍保留在建议栏。接受、切换会话或退出行内模式时会清理插件拥有的提示。
