@@ -176,32 +176,55 @@ window.__ModuleLoader__.load({
       return body
     }
 
+    async function withTimeout(work, milliseconds) {
+      const abort = new AbortController()
+      let timer
+      try {
+        return await Promise.race([
+          new Promise((_, reject) => {
+            timer = setTimeout(() => {
+              const error = new DOMException('Suggestion timed out', 'TimeoutError')
+              abort.abort(error)
+              reject(error)
+            }, milliseconds)
+          }),
+          work(abort.signal),
+        ])
+      } finally { clearTimeout(timer) }
+    }
+
     async function request(kind, sessionId, draft, revision, source) {
-      const response = await fetch(`${API}/suggest`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ kind, sessionId, draft, revision, source }),
-      })
-      const body = await response.json()
-      if (body?.ok !== true) throw new Error(body?.error ?? 'failed')
-      if (body.sessionId !== sessionId || body.revision !== revision || typeof body.source !== 'string') {
-        return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
-      }
-      const text = typeof body.text === 'string' ? body.text : ''
-      // Surface the Host's own explanation; an empty string alone cannot be acted on.
-      if (text === '' && body.reason !== undefined) {
-        reportProbe({ phase: 'empty-result', reason: body.reason, transcriptChars: body.transcriptChars })
-        // A brand-new or empty session has nothing to predict from. That is not a
-        // failure, so surface it as a quiet "no suggestion", not a silent no-op.
-        return { text: '', candidates: [], confidence: null, reason: body.reason }
-      }
-      // `next` returns a candidate list; the other kinds return a single text.
-      const candidates = Array.isArray(body.candidates)
-        ? body.candidates.filter(item => typeof item === 'string' && item.trim() !== '').slice(0, 3)
-        : []
-      if (candidates.length === 0 && text !== '') candidates.push(text)
-      const confidence = Number.isFinite(body.confidence) && body.confidence >= 0 && body.confidence <= 1 ? body.confidence : null
-      return { text: candidates[0] ?? '', candidates, confidence, source: body.source }
+      const configured = settingsStore.value?.timeoutMs
+      const deadline = Number.isFinite(configured) ? Math.max(2000, Math.min(120000, configured)) : 20000
+      return withTimeout(async (signal) => {
+        const response = await fetch(`${API}/suggest`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ kind, sessionId, draft, revision, source }),
+          signal,
+        })
+        const body = await response.json()
+        signal.throwIfAborted()
+        if (body?.ok !== true) throw new Error(body?.error ?? 'failed')
+        if (body.sessionId !== sessionId || body.revision !== revision || typeof body.source !== 'string') {
+          return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
+        }
+        const text = typeof body.text === 'string' ? body.text : ''
+        if (text === '' && body.reason !== undefined) {
+          reportProbe({ phase: 'empty-result', reason: body.reason, transcriptChars: body.transcriptChars })
+          return { text: '', candidates: [], confidence: null, reason: body.reason }
+        }
+        if (text !== '' && !await sourceMatches(sessionId, body.source)) {
+          return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
+        }
+        signal.throwIfAborted()
+        const candidates = Array.isArray(body.candidates)
+          ? body.candidates.filter(item => typeof item === 'string' && item.trim() !== '').slice(0, 3)
+          : []
+        if (candidates.length === 0 && text !== '') candidates.push(text)
+        const confidence = Number.isFinite(body.confidence) && body.confidence >= 0 && body.confidence <= 1 ? body.confidence : null
+        return { text: candidates[0] ?? '', candidates, confidence, source: body.source }
+      }, deadline + 1000)
     }
 
     /**
@@ -416,16 +439,14 @@ window.__ModuleLoader__.load({
       if (kind === 'complete' && hasDraftRequest(sessionId, draft)) return Promise.resolve(null)
       const id = nextRequestId(sessionId)
       const revision = trackDraft(sessionId, draft).revision
-      pendingBySession.set(sessionId, { id, draft, revision })
+      pendingBySession.set(sessionId, { id, draft, revision, bounded: true })
       publishStore()
       reportProbe({ phase: 'begin', trace: `req-${id}`, owner: sessionId, kind, cause })
-      return request(kind, sessionId, draft, revision, source).then(async (result) => {
-        const stale = () => id !== currentRequestId(sessionId) || draftBySession.get(sessionId)?.revision !== revision
-        if (stale() || result.text === '') return null
-        const matches = await sourceMatches(sessionId, result.source)
+      return request(kind, sessionId, draft, revision, source).then((result) => {
+        const stale = id !== currentRequestId(sessionId) || draftBySession.get(sessionId)?.revision !== revision
         reportProbe({ phase: 'result', trace: `req-${id}`, kind,
-          textLength: result.text.length, stale: stale() || !matches, owner: sessionId, confidence: result.confidence })
-        if (stale() || !matches) return null
+          textLength: result.text.length, stale, owner: sessionId, confidence: result.confidence })
+        if (stale || result.text === '') return null
         const record = {
           kind, text: result.text, draftAt: draft, source: result.source,
           candidates: result.candidates, confidence: result.confidence,
@@ -491,9 +512,12 @@ window.__ModuleLoader__.load({
     }
 
     async function sourceMatches(sessionId, source) {
-      const response = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`)
-      const body = await response.json()
-      return body.ok === true && typeof source === 'string' && body.source === source
+      return withTimeout(async (signal) => {
+        const response = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`, { signal })
+        const body = await response.json()
+        signal.throwIfAborted()
+        return body.ok === true && typeof source === 'string' && body.source === source
+      }, 5000)
     }
 
     /** Next request id for one session. */
@@ -528,6 +552,12 @@ window.__ModuleLoader__.load({
 
     /** Sessions whose prediction is currently generating. */
     const pendingBySession = sessionState.pending
+    // Pre-deadline requests cannot keep a reloaded plugin permanently busy.
+    for (const [owner, active] of pendingBySession) {
+      if (active?.bounded === true) continue
+      nextRequestId(owner)
+      pendingBySession.delete(owner)
+    }
 
     /** Notified whenever any session's stored suggestion changes. */
     const storeListeners = sessionState.listeners
@@ -1079,8 +1109,8 @@ window.__ModuleLoader__.load({
           && draftBySession.get(sessionId)?.revision === revision && currentRequestId(sessionId) === id
         setBusy(true); setFailed(false)
         try {
-          const { text, source } = await request('polish', sessionId, draft, revision)
-          if (text !== '' && unchanged() && await sourceMatches(sessionId, source) && unchanged()) inputActions.setDraft(text)
+          const { text } = await request('polish', sessionId, draft, revision)
+          if (text !== '' && unchanged()) inputActions.setDraft(text)
         } catch {
           if (unchanged()) setFailed(true)
         } finally {

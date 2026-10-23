@@ -56,21 +56,42 @@ const { runInNewContext } = await import('node:vm')
 let module
 const requests = []
 let currentSource = 'cut-1'
-const storage = new Map()
+const storage = new Map(), timers = new Set(), sourceWaits = []
+let stallSource = false
+const expire = milliseconds => {
+  const timer = [...timers].find(value => value.milliseconds === milliseconds)
+  assert(timer, `deadline ${milliseconds} was installed`)
+  timers.delete(timer); timer.callback()
+}
 const sandbox = {
+  AbortController, DOMException,
+  setTimeout: (callback, milliseconds) => { const timer = { callback, milliseconds }; timers.add(timer); return timer },
+  clearTimeout: timer => timers.delete(timer),
   window: { __ModuleLoader__: { load: value => { module = value } } },
   sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
   fetch: async (url, options) => {
+    if (String(url).includes('/turn?') && stallSource) return new Promise(resolve => sourceWaits.push(resolve))
     if (!String(url).endsWith('/suggest')) return { json: async () => ({ ok: true, source: currentSource }) }
     const body = JSON.parse(options.body)
-    return new Promise(resolve => requests.push({ body, finish: (text, overrides = {}) => resolve({ json: async () => ({ ok: true, text, sessionId: body.sessionId, revision: body.revision, source: 'cut-1', ...overrides }) }) }))
+    return new Promise(resolve => requests.push({ body, signal: options.signal,
+      finish: (text, overrides = {}, stalledBody) => resolve({ json: async () => stalledBody ?? ({ ok: true, text, sessionId: body.sessionId, revision: body.revision, source: 'cut-1', ...overrides }) }) }))
   },
 }
 let clientSource = await readFile(new URL('./client.js', import.meta.url), 'utf8')
-clientSource = clientSource.replace("      inject: ['slots'", "      checks: { runRequest, trackDraft, suggestionBySession, pendingBySession, nextRequestId },\n      inject: ['slots'")
+clientSource = clientSource.replace("      inject: ['slots'", "      checks: { runRequest, trackDraft, suggestionBySession, pendingBySession, nextRequestId, settingsStore, sourceMatches },\n      inject: ['slots'")
 runInNewContext(clientSource, sandbox)
+const legacyRecord = { kind: 'next', text: 'KEEP', draftAt: '', source: 'cut-1' }
+sandbox.window[Symbol.for('dsh.composer-assist.session-state.v2')] = {
+  requests: new Map([['legacy', 1]]), pending: new Map([['legacy', { id: 1, draft: '', revision: 1 }]]),
+  suggestions: new Map([['legacy', legacyRecord]]), candidates: new Map(),
+  drafts: new Map([['legacy', { draft: 'keep draft', revision: 1 }]]), listeners: new Set(),
+}
 const client = module.factory(() => ({})).checks
 assert(client)
+assert(!client.pendingBySession.has('legacy'), 'unbounded legacy requests cannot survive as busy')
+assert.equal(sandbox.window[Symbol.for('dsh.composer-assist.session-state.v2')].requests.get('legacy'), 2)
+assert.equal(client.suggestionBySession.get('legacy'), legacyRecord)
+assert.equal(sandbox.window[Symbol.for('dsh.composer-assist.session-state.v2')].drafts.get('legacy').draft, 'keep draft')
 client.trackDraft('a', 'draft')
 const old = client.runRequest('complete', 'a', 'draft', 'test')
 const beforeDuplicate = requests.length
@@ -107,6 +128,49 @@ assert.equal(client.suggestionBySession.get('a').text, 'NEW')
 const cancelled = client.runRequest('next', 'a', 'draft', 'test')
 client.nextRequestId('a'); requests.at(-1).finish('CANCELLED'); await cancelled
 assert.equal(client.suggestionBySession.get('a').text, 'NEW')
+
+// Fire the real Client deadlines without waiting or trusting transport cancellation.
+client.settingsStore.value = { timeoutMs: 2000 }
+const headerHang = client.runRequest('next', 'a', 'draft', 'timeout')
+const lateHeader = requests.at(-1)
+expire(3000); await headerHang
+assert(lateHeader.signal.aborted && !client.pendingBySession.has('a'))
+lateHeader.finish('TOO LATE')
+await new Promise(resolve => setImmediate(resolve))
+assert.equal(client.suggestionBySession.get('a').text, 'NEW')
+let finishBody
+const bodyHang = client.runRequest('next', 'a', 'draft', 'timeout')
+requests.at(-1).finish('', {}, new Promise(resolve => { finishBody = resolve }))
+await new Promise(resolve => setImmediate(resolve))
+expire(3000); await bodyHang
+assert(!client.pendingBySession.has('a'))
+finishBody({ ok: true, text: 'LATE BODY' })
+await new Promise(resolve => setImmediate(resolve))
+assert.equal(client.suggestionBySession.get('a').text, 'NEW')
+stallSource = true
+const sourceHang = client.runRequest('next', 'a', 'draft', 'timeout')
+requests.at(-1).finish('LATE SOURCE CHECK')
+await new Promise(resolve => setImmediate(resolve))
+expire(3000); await sourceHang
+assert(!client.pendingBySession.has('a'))
+sourceWaits.shift()({ json: async () => ({ ok: true, source: 'cut-1' }) })
+await new Promise(resolve => setImmediate(resolve))
+assert.equal(client.suggestionBySession.get('a').text, 'NEW')
+const acceptCheck = client.sourceMatches('a', 'cut-1')
+expire(5000)
+await assert.rejects(acceptCheck, { name: 'TimeoutError' })
+sourceWaits.shift()({ json: async () => ({ ok: true, source: 'cut-1' }) })
+stallSource = false
+const timedOld = client.runRequest('next', 'a', 'draft', 'timeout')
+const timedRequest = requests.at(-1)
+const stillNew = client.runRequest('next', 'a', 'draft', 'timeout')
+expire(3000); await timedOld
+assert(client.pendingBySession.has('a'), 'old timeout cannot clear newer busy state')
+requests.at(-1).finish('NEW AFTER TIMEOUT'); await stillNew
+timedRequest.finish('LATE OLD REQUEST')
+await new Promise(resolve => setImmediate(resolve))
+assert.equal(client.suggestionBySession.get('a').text, 'NEW AFTER TIMEOUT')
+assert.equal(timers.size, 0, 'all Client deadline timers are cleared')
 
 // Execute the actual accept callback through its asynchronous source check.
 const acceptStart = clientSource.indexOf('        let accepting = false')
@@ -162,6 +226,37 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
   assert.deepEqual(writes, change === 'none' ? ['polished'] : [], `polish guard: ${change}`)
 }
 
+// Low reasoning is chosen only from supported controls; stream errors reject partial text.
+for (const supported of [true, false]) {
+  let observed
+  const llm = {
+    prepareCall: async (controls, _signal, configure) => ({
+      config: { reasoningEffort: 'medium', ...configure(controls, { reasoning: { efforts: supported ? [{ id: 'medium' }, { id: 'low' }] : [{ id: 'medium' }] } }) },
+      stream: async function* (options) { observed = options; yield { type: 'text-delta', text: 'ok' } },
+    }),
+  }
+  assert.equal(await check.runAuxiliary({ llm }, { id: 'speed' }, { maxOutputTokens: 600 }, 'system', 'prompt', new AbortController().signal, { provider: 'test', model: 'unchanged' }), 'ok')
+  assert.equal(observed.reasoningEffort, supported ? 'low' : 'medium')
+  assert.equal(observed.model, 'unchanged')
+  assert.equal(observed.maxTokens, 600)
+}
+await assert.rejects(check.runAuxiliary({ llm: { prepareCall: async () => ({ config: {}, stream: async function* () {
+  yield { type: 'text-delta', text: 'PARTIAL' }
+  yield { type: 'finish', reason: { kind: 'error', failure: { message: 'stream failed' } } }
+} }) } }, { id: 'error' }, {}, '', '', new AbortController().signal, {}), /stream failed/)
+let prepared, dispatched = false, releasePreparation
+const preparationSignal = new AbortController()
+const preparation = check.generate({ llm: { prepareCall: () => new Promise(resolve => { releasePreparation = resolve; prepared = true }) } },
+  { id: 'late-preparation' }, {}, '', '', preparationSignal.signal, 'late-preparation')
+await new Promise(resolve => setImmediate(resolve))
+assert(prepared)
+preparationSignal.abort()
+await assert.rejects(preparation)
+assert(!check.predictingIn.has('late-preparation'))
+releasePreparation({ config: {}, stream: async function* () { dispatched = true } })
+await new Promise(resolve => setImmediate(resolve))
+assert(!dispatched && !check.runningCalls.has('late-preparation'), 'late preparation cannot dispatch after abort')
+
 // Exercise the real authenticated-route handler under a delayed auxiliary model.
 const { apply } = await import('./index.js')
 const routes = new Map(), generations = []
@@ -187,16 +282,36 @@ try {
   const older = suggest(2)
   await until(() => generations.length === 2)
   const newer = suggest(3)
-  await until(() => generations.length === 3)
+  await until(() => !check.predictingIn.has(session.id))
+  assert.equal(generations.length, 2, 'replacement cannot overlap the old provider call')
   generations[1]('1. OLD\nCONFIDENCE: 0.9')
   assert.equal((await (await older).json()).reason, 'stale-source')
+  await until(() => generations.length === 3)
   generations[2]('1. CURRENT\nCONFIDENCE: 0.9')
   const response = await (await newer).json()
   assert.equal(response.text, 'CURRENT')
   assert.equal(response.revision, 3)
   assert.equal(response.source, check.sourceOf(session))
+  const savedTimeout = check.DEFAULTS.timeoutMs
+  try {
+    check.DEFAULTS.timeoutMs = 80
+    const hung = suggest(4)
+    await until(() => generations.length === 4)
+    const timedOut = await (await hung).json()
+    assert.equal(timedOut.reason, 'timeout')
+    assert(!check.predictingIn.has(session.id), 'timeout cannot suppress later real turns')
+    assert(check.runningCalls.has(`${session.id}:next`), 'actual provider call stays owned until it drains')
+    const afterTimeout = suggest(5)
+    await new Promise(resolve => setImmediate(resolve))
+    assert.equal(generations.length, 4)
+    generations[3]('1. TOO LATE\nCONFIDENCE: 0.9')
+    await until(() => generations.length === 5)
+    generations[4]('1. RECOVERED\nCONFIDENCE: 0.9')
+    assert.equal((await (await afterTimeout).json()).text, 'RECOVERED')
+    assert(!check.runningCalls.has(`${session.id}:next`))
+  } finally { check.DEFAULTS.timeoutMs = savedTimeout }
 } finally {
   if (home === undefined) delete process.env.DSH_HOME
   else process.env.DSH_HOME = home
 }
-console.log('Composer context, conservative prediction, source/draft race, ownership and fallback checks passed')
+console.log('Composer context, ownership, hard deadlines, late-result rejection and per-call low-reasoning checks passed')

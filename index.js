@@ -71,8 +71,7 @@ const DEFAULTS = {
   provider: '',
   model: '',
   maxInputChars: 12000,
-  // Reasoning models spend output budget on reasoning first; a tight cap returns an
-  // empty string instead of a short answer. 600 fits one short message and stays cheap.
+  // Reasoning consumes output budget too; whether this is an upstream cap depends on the provider.
   maxOutputTokens: 600,
   timeoutMs: 20000,
   debounceMs: 600,
@@ -351,8 +350,28 @@ function clean(text) {
   return value
 }
 
+/** Stop waiting even when a provider ignores cancellation; still observe its eventual rejection. */
+async function abortable(work, signal) {
+  signal.throwIfAborted()
+  let onAbort
+  try {
+    return await Promise.race([
+      new Promise((_, reject) => {
+        onAbort = () => reject(signal.reason)
+        signal.addEventListener('abort', onAbort, { once: true })
+      }),
+      Promise.resolve().then(() => { signal.throwIfAborted(); return work() }),
+    ])
+  } finally {
+    signal.removeEventListener('abort', onAbort)
+  }
+}
+
+// Keep actual calls owned until they drain, even after the HTTP deadline returns.
+const runningCalls = new Map()
+
 /** One auxiliary request against the resolved route; returns the assembled text. */
-async function generate(ctx, session, settings, system, prompt, signal) {
+async function generate(ctx, session, settings, system, prompt, signal, key) {
   const route = resolveRoute(ctx, session, settings)
   if (route === undefined) throw new Error('没有可用的模型路由：请先在设置里选择模型')
   // Mark this session as carrying our own auxiliary request for the whole call.
@@ -360,7 +379,11 @@ async function generate(ctx, session, settings, system, prompt, signal) {
   const marker = (predictingIn.get(sessionKey) ?? 0) + 1
   predictingIn.set(sessionKey, marker)
   try {
-    return await runAuxiliary(ctx, session, settings, system, prompt, signal, route)
+    const work = runAuxiliary(ctx, session, settings, system, prompt, signal, route)
+    runningCalls.set(key, work)
+    const release = () => { if (runningCalls.get(key) === work) runningCalls.delete(key) }
+    void work.then(release, release)
+    return await abortable(() => work, signal)
   } finally {
     const left = (predictingIn.get(sessionKey) ?? 1) - 1
     if (left <= 0) predictingIn.delete(sessionKey)
@@ -370,7 +393,11 @@ async function generate(ctx, session, settings, system, prompt, signal) {
 
 /** The auxiliary model call itself, run while the session carries our marker. */
 async function runAuxiliary(ctx, session, settings, system, prompt, signal, route) {
-  const call = await ctx.llm.prepareCall({ ...route, maxTokens: settings.maxOutputTokens }, signal)
+  const call = await ctx.llm.prepareCall({ ...route, maxTokens: settings.maxOutputTokens }, signal, (controls, model) => {
+    const low = model.reasoning?.efforts.find(effort => effort.id === 'low')
+    return low === undefined ? controls : { ...controls, reasoningEffort: low.id }
+  })
+  signal.throwIfAborted()
   const options = {
     ...call.config,
     messages: [{ role: 'user', content: [{ type: 'text', text: prompt }] }],
@@ -380,6 +407,10 @@ async function runAuxiliary(ctx, session, settings, system, prompt, signal, rout
   }
   let text = ''
   for await (const chunk of call.stream(options)) {
+    signal.throwIfAborted()
+    if (chunk.type === 'finish' && (chunk.reason.kind === 'error' || chunk.reason.kind === 'aborted')) {
+      throw new Error(chunk.reason.failure.message)
+    }
     if (chunk.type === 'text-delta') text += chunk.text
   }
   return clean(text)
@@ -629,21 +660,24 @@ export function apply(ctx) {
         // service, an unreadable directory, or a slow git call all degrade to no
         // context instead of failing the suggestion. `get(session)` is a read-only
         // synchronous lookup, so no agent handle or `ensure()` round trip is needed.
-        let context = ''
-        try {
-          context = await workspaceContext(
-            { fs: scoped.get('fs'), subprocess: scoped.get('subprocess') },
-            scoped.get('workingDirectory')?.get(session))
-        } catch { /* context is optional */ }
-        lastTranscript.workspaceChars = context.length
-        const prompt = [basePrompt, hint, context].filter((part) => part !== '').join('\n\n')
-
         if (stale()) return discard({ ok: true, text: '', reason: 'stale-source' })
         const abort = new AbortController()
         inflight.set(key, abort)
-        const timer = setTimeout(() => abort.abort(), settings.timeoutMs)
+        const timer = setTimeout(() => abort.abort(new DOMException('Suggestion timed out', 'TimeoutError')), settings.timeoutMs)
         try {
-          const raw = await generate(scoped, session, settings, SYSTEM[kind], prompt, abort.signal)
+          const previous = runningCalls.get(key)
+          if (previous !== undefined) await abortable(() => previous.catch(() => {}), abort.signal)
+          const context = await abortable(async () => {
+            try {
+              return await workspaceContext(
+                { fs: scoped.get('fs'), subprocess: scoped.get('subprocess') },
+                scoped.get('workingDirectory')?.get(session))
+            } catch { return '' }
+          }, abort.signal)
+          lastTranscript.workspaceChars = context.length
+          const prompt = [basePrompt, hint, context].filter((part) => part !== '').join('\n\n')
+          if (stale()) return reply({ ok: true, text: '', reason: 'stale-source' })
+          const raw = await generate(scoped, session, settings, SYSTEM[kind], prompt, abort.signal, key)
           if (stale() || abort.signal.aborted) return reply({ ok: true, text: '', reason: 'stale-source' })
           if (raw === '') return reply({ ok: true, text: '', reason: 'model-empty', transcriptChars: history.length })
           if (kind === 'next') {
@@ -657,7 +691,7 @@ export function apply(ctx) {
           }
           return reply({ ok: true, text: raw })
         } catch (error) {
-          if (abort.signal.aborted) return reply({ ok: true, text: '' })
+          if (abort.signal.aborted) return reply({ ok: true, text: '', reason: abort.signal.reason?.name === 'TimeoutError' ? 'timeout' : 'stale-source' })
           return reply({ ok: false, error: error instanceof Error ? error.message : String(error) })
         } finally {
           clearTimeout(timer)
@@ -670,4 +704,4 @@ export function apply(ctx) {
 }
 
 /** Internals the self-check exercises directly; not part of the plugin contract. */
-export const __test = { parseCandidates, statsOf, learnHint, workspaceContext, gitStatus, readSettings, writeSettings, withSettings, transcript, sourceOf, SYSTEM, buildPrompt }
+export const __test = { parseCandidates, statsOf, learnHint, workspaceContext, gitStatus, readSettings, writeSettings, withSettings, transcript, sourceOf, SYSTEM, buildPrompt, abortable, generate, runAuxiliary, runningCalls, predictingIn, DEFAULTS }

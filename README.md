@@ -90,6 +90,14 @@ The confidence on the bar is the model's own rough self-assessment, shown only a
 
 Within the existing character budget, recent user requests/answers and older user constraints take priority, followed by up to four bounded textual tool results. Hidden reasoning, attachments, tool arguments, and system prompts are not copied. Predictions offer 1–3 grounded candidates or abstain. Session/source/draft-revision checks reject outdated responses; acceptance rechecks the source and never overwrites an edited draft. Polishing also protects intervening edits. Completed candidates remain session-local; legacy entries without a source are discarded. This uses the read-only message view, not a full model-request snapshot or an active fork.
 
+### 硬超时与响应速度 · Hard deadlines and latency
+
+- Host 在工作区准备、等待旧调用退出、模型准备和生成期间执行同一硬截止；浏览器对请求、响应体和来源检查另设配置时限 + 1 秒兜底。接受候选的来源检查最多 5 秒。超时结束「生成中」，丢弃迟到结果，保留有效旧候选，不自动重试。
+- 对明确支持 `low` 推理的模型，只为本次预测、补全或润色调用使用低推理档；其他模型保持默认。不更换模型、不改主会话设置，也不缩减现有上下文。输出预算是否是远端硬限制取决于提供方。
+- 截止后会请求取消，但不能保证远端立即停止生成或计费；未结束的调用仍被记账，同会话同类新请求等待它退出，避免叠加后台调用。
+
+The Host enforces one deadline across workspace preparation, previous-call draining, model preparation and generation. The browser bounds the request, response body and source validation by the configured timeout plus one second; acceptance checks have a five-second limit. Late results are discarded without clearing valid suggestions or retrying. Auxiliary calls use low reasoning only when the exact model advertises it, without changing the main session or selected model. Cancellation is best-effort upstream: an unfinished call remains owned until it drains, and replacements do not overlap it. Token-budget enforcement depends on the provider.
+
 ## 实现说明 · Implementation notes
 
 `display: inline`（行内模式）在空草稿上显示一个非编辑预览，与编辑器共享网格区域并隐藏 placeholder；换行会撑开输入区域。草稿补全复用宿主的 `--dsh-composer-hint`，跟随文字末尾排版。继续编辑使原建议与草稿不匹配时，行内预览隐藏，候选仍保留在建议栏。接受、切换会话或退出行内模式时会清理插件拥有的提示。
