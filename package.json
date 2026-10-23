@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "description": "Context-aware composer predictions for DeepSeek Harness, with draft completion, prompt polishing, per-session suggestions and stale-response protection.",
-  "license": "MIT",
+  "license": "SEE LICENSE IN LICENSE",
   "exports": {
     ".": "./index.js",
     "./client": "./client.js",
