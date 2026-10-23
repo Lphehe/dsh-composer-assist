@@ -1,18 +1,71 @@
-# 输入框预测 · Composer prediction
+# 输入框预测
 
-> **中文**：根据当前对话和你说话的方式，在输入框上方给出你下一条最可能发的消息，按 Tab 即可采用；同时支持输入时补全草稿、一键润色提示词。
+**让 DSH 先起草下一句，由你决定是否采用。**
+
+结合当前对话预测后续输入、补全草稿，或按需润色提示词。建议按会话保留；按 **Tab** 只填入草稿，**不会自动发送**。
+
+![中文功能介绍：预测下一句、补全草稿、提示词润色；Tab 只填入草稿，不自动发送](<screenshots/overview-zh.png>)
+
+当前公开版本为 **[v0.1.1](<https://github.com/Lphehe/dsh-composer-assist/releases/tag/v0.1.1>)**，只包含输入预测相关功能，不包含开发中的动态工作流。上图是功能介绍图，不是模型生成结果截图。
+
+> **先看费用：**预测、补全和润色会发起真实模型调用，可能产生费用。默认自动模式会在每轮回答后预测一次；建议先在设置中切到“只在手动调用时”，确认模型和预算后再启用自动预测。
 >
-> **English**: Predicts your next message in the DSH composer, based on your conversation and how you talk to it. Press Tab to take it. It also completes a draft as you type and rewrites a prompt for clarity on demand.
+> **许可边界：**源码可见，不是开放源代码许可证。允许使用未经修改的版本；修改、制作衍生版本或分发修改版本须事先取得著作权人书面许可。详见[完整许可](<LICENSE>)。
 
-<p align="center">
-  <img src="screenshots/composer-bar.png" alt="建议栏显示在输入框上方" width="720">
-</p>
-<p align="center"><sub>输入框上方的独立建议栏，与输入框同宽对齐</sub></p>
+## 快速安装
 
-<p align="center">
-  <img src="screenshots/settings.png" alt="设置页" width="560">
-</p>
-<p align="center"><sub>设置 → 输入框预测</sub></p>
+在 DSH 中打开 **插件 → 添加插件**，粘贴下面的公开下载地址，完成安装后启用：
+
+```text
+https://github.com/Lphehe/dsh-composer-assist/releases/download/v0.1.1/dsh-composer-assist.tgz
+```
+
+这是已预打包的 v0.1.1，不需要源码构建。也可以让 Harness 助手使用 `plugin_manager install_bundle` 安装同一个地址。
+
+普通 CLI profile 可使用下列命令；把 `web` 换成你的 profile 名，Desktop 使用插件管理器：
+
+```bash
+dsh plugin --profile web add https://github.com/Lphehe/dsh-composer-assist/releases/download/v0.1.1/dsh-composer-assist.tgz
+```
+
+## 你可以怎么用
+
+| 你想做的事 | 使用方式 |
+| --- | --- |
+| 接着当前对话继续提问 | 自动模式在回答结束后预测下一句，也可点“预测”手动调用。 |
+| 已写了一半，不想从头改写 | 单词补全模式在输入停顿后补全草稿。 |
+| 把现有草稿说得更清楚 | 点“润色”，检查结果后再采用。 |
+| 只想自己决定什么时候调用 | 进入“设置 → 输入框预测”，选择“只在手动调用时”。 |
+
+**接受不等于发送。** Tab 或接受按钮只把建议填进草稿；Esc 隐藏建议，“忽略”丢弃候选。草稿为空时可用左右方向键切换候选；按住修饰键或输入法正在组合时不拦截方向键。
+
+## 中文界面实图
+
+以下图片来自 v0.1.1 在官方 DSH **0.2.1-rc.2** 中的实际 GUI 安装验收，只展示草稿、操作入口和设置；没有配置模型，也没有生成预测结果。
+
+![中文输入框实图：草稿旁的预测与润色入口；未执行模型生成](<screenshots/composer-bar.png>)
+
+![中文设置实图：只在手动调用时、显示位置、预测模型与调用参数](<screenshots/settings.png>)
+
+## 设置与使用边界
+
+- **先配置模型。**未指定预测模型时，跟随本会话上次真实用过的模型；没有可用模型时，需要先在 DSH 的模型设置中配置。
+- **自动调用可关闭。**支持自动预测、输入时补全、两者都要和仅手动四种模式。可调整输出上限、输入停顿、超时、上下文上限及置信度门槛。
+- **接受学习默认关闭。**启用后会记录接受/忽略统计，也可以清除统计。
+- **注意发送给模型的上下文。**调用会使用近期对话、用户约束、有限工具文本证据，以及经筛选的工作区顶层文件名和 Git 状态摘要；不读取这些工作区文件的内容，也不复制隐藏推理、图片、附件、工具参数或整个系统提示词。
+- **迟到结果会被丢弃。**会话、来源或草稿发生变化时，旧请求不能覆盖新输入；取消远端调用是尽力而为，不能保证立刻停止生成或计费。
+- **置信度不是概率保证。**高/中/低是模型自评，不是经过校准的准确率。
+
+配置保存在 `$DSH_HOME/composer-assist/settings.json`。本次验证覆盖安装、启用、设置保存与重开、浅深色界面、未发送草稿；**不代表模型输出质量、完整候选接受链或其他 DSH 版本已经验收**。
+
+## 自检与许可
+
+克隆仓库后可运行 `node selfcheck.mjs`，检查解析、上下文、所有权与超时保护等已有自检；不调用模型，也不改写用户设置。
+
+原创程序代码采用“源码可见、禁止修改”条款，完整内容见 [LICENSE](<LICENSE>)。用户自己的配置、输入、输出和工作流脚本不受本项修改限制；第三方组件继续遵守各自许可证。
+
+<details>
+<summary>完整设置与技术资料（保留原文及英文对照）</summary>
 
 ## 功能 · Features
 
@@ -134,3 +187,5 @@ After cloning, run `node selfcheck.mjs` for parser, learning-counter and context
 原创程序代码采用“源码可见、禁止修改”条款，并非开放源代码许可证。允许使用未经修改的版本；未经著作权人事先书面许可，不得修改本软件、制作衍生版本或分发修改版本。完整条款见 [LICENSE](LICENSE)。用户自己的配置、输入、输出和工作流脚本不受本项修改限制。
 
 The original program code is source-available under use-permitted, modification-prohibited terms, not an open-source license. Use of the unmodified software is permitted; modification or derivative versions require the copyright holder's prior written permission. See [LICENSE](LICENSE). These restrictions do not apply to users' own configuration, input, output or workflow scripts.
+
+</details>
