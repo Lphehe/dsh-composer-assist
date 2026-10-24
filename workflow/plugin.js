@@ -69,6 +69,7 @@ export async function apply(ctx) {
         args: { type: 'object', additionalProperties: true, description: 'JSON arguments exposed as args in the script.' },
         concurrency: { type: 'integer', minimum: 1, maximum: 64 },
         provider: { type: 'string' }, model: { type: 'string' },
+        routing: { type: 'string', enum: ['none', 'latency', 'cost', 'balanced'], description: 'How to pick among the session-approved subagent models once this machine has observed them: fastest median latency, fewest reported tokens, a blend that also penalises failures, or none to keep the first approved route.' },
         scope: { type: 'string', enum: ['project', 'global'] },
         questionId: { type: 'string' }, answer: { type: 'string' },
         holeId: { type: 'string' }, body: { type: 'string', description: 'TypeScript code body to fill an open workflow hole.' },

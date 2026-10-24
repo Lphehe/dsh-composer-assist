@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { ConcurrencyController, WorkflowError, validate, refToString } from '@zcode/dynamic-workflow'
 import { createWorld } from './world.js'
 import { createNativeTeam } from './native-team.js'
+import { pickRoute } from './model-stats.js'
 
 const textBlock = text => [{ type: 'text', text }]
 const READ_TOOLS = new Set(['read', 'read_image', 'glob', 'grep', 'web_search', 'web_fetch', 'list_agents', 'team_task_list', 'team_task_get', 'job_output', 'job_list', 'tool_help', 'cordis_inspect_list', 'cordis_inspect_query', 'session_search', 'session_event_search', 'session_event_read', 'get_goal'])
@@ -24,12 +25,20 @@ export function resolveRoutes(parent, input, analysis) {
   const allowed = savedPolicy?.enabled ? savedPolicy.allowedModels : []
   if (savedPolicy?.enabled && allowed.length === 0) throw new Error('当前会话没有允许的子代理模型')
   const defaultRoute = savedPolicy?.enabled && !allowed.some(route => route.provider === inherited.provider && route.model === inherited.model) ? allowed[0] : inherited
+  // When the session authorises several models and the caller states an
+  // objective, pick by what this machine actually observed. input.stats is the
+  // recorder from manager.js; without it, or without any observation, the first
+  // authorised route wins — never a guess.
+  const selected = input.objective && input.objective !== 'none' && Array.isArray(input.stats?.candidates)
+    ? pickRoute(input.stats.candidates, { objective: input.objective, stats: input.stats })
+    : undefined
   const choose = (provider, model, explicit) => {
     if (explicit && !allowed.some(route => route.provider === provider && route.model === model)) throw new Error(`子代理模型 ${provider}/${model} 不在当前会话允许列表中`)
     return provider === inherited.provider && model === inherited.model ? { ...inherited } : { provider, model }
   }
   if ((input.provider === undefined) !== (input.model === undefined)) throw new Error('provider 和 model 必须同时指定')
-  const base = input.routePin?.base ?? choose(input.provider ?? defaultRoute.provider, input.model ?? defaultRoute.model, input.provider !== undefined || savedPolicy?.enabled === true)
+  const chosen = selected ?? defaultRoute
+  const base = input.routePin?.base ?? choose(input.provider ?? chosen.provider, input.model ?? chosen.model, input.provider !== undefined || savedPolicy?.enabled === true)
   const bindings = { ...(input.routePin?.bindings ?? {}) }
   for (const reference of analysis.modelReferences ?? []) {
     const name = reference.name ?? reference.model
@@ -202,14 +211,14 @@ export function createDshDriver(parent, config) {
       route = authorized
     }
     const link = await native.createActor(actor, persona, route, seed, existing)
-    actors.set(link.sessionId, { actor, persona, tail: Promise.resolve() })
+    actors.set(link.sessionId, { actor, persona, route, tail: Promise.resolve() })
     journal.putActor({ ...existing, runId, ...actor, name: persona.name, persona, sessionId: link.sessionId, resolvedModel: JSON.stringify(route) })
     return { id: link.sessionId }
   }
   function startAsk(session, instance, message) {
     const owner = actors.get(session.id)
     if (!owner) { sink.askFailed(instance, new WorkflowError('DriverError', 'actor 会话未创建')); return }
-    const state = { instance, message, sessionId: session.id, accepted: false, finished: false, toolCalls: 0, worldToolCalls: 0, turns: 0 }
+    const state = { instance, message, sessionId: session.id, accepted: false, finished: false, toolCalls: 0, worldToolCalls: 0, turns: 0, startedAt: Date.now() }
     states.set(refToString(instance), state)
     owner.tail = addTask(owner.tail.then(async () => {
       if (closing || signal.aborted || state.cancelled) return
@@ -231,6 +240,9 @@ export function createDshDriver(parent, config) {
         const fresh = snapshot.events.slice(state.statsEventCount ?? state.startSeq ?? 0)
         const tokens = fresh.reduce((total, event) => total + (event.type === 'assistant/message' ? event.data.usage?.totalTokens ?? ((event.data.usage?.inputTokens ?? 0) + (event.data.usage?.outputTokens ?? 0)) : 0), 0)
         sink.askStats(instance, { tokens, toolCalls: state.toolCalls - (state.statsTools ?? 0), worldToolCalls: state.worldToolCalls - (state.statsWorldTools ?? 0), turns: 1 })
+        // Feed the observed cost of this ask back so a later run with a routing
+        // objective can rank models on what actually happened here.
+        config.observeModel?.(owner.route, { elapsedMs: Date.now() - state.startedAt, tokens, failed: state.reason?.kind !== 'completed' })
         state.statsTools = state.toolCalls; state.statsWorldTools = state.worldToolCalls; state.statsEventCount = snapshot.events.length
         if (state.reason?.kind !== 'completed') { sink.askFailed(instance, new WorkflowError('DriverError', JSON.stringify(state.reason ?? { kind: 'missing-turn-end' }))); break }
         if (state.submitted) {

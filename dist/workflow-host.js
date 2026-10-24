@@ -3,9 +3,9 @@ import { FACADE_DTS, SNIPPET_FACADE_DTS } from "@zcode/dynamic-workflow";
 
 // workflow/host/manager.js
 import { randomUUID as randomUUID2 } from "node:crypto";
-import { join as join2 } from "node:path";
+import { join as join3 } from "node:path";
 import { homedir } from "node:os";
-import { mkdirSync as mkdirSync2 } from "node:fs";
+import { mkdirSync as mkdirSync3 } from "node:fs";
 import { runWorkflowScript } from "@zcode/dynamic-workflow-runtime";
 import { validate as validate2, inputHash, refToString as refToString3 } from "@zcode/dynamic-workflow";
 
@@ -780,6 +780,94 @@ ${message.instructions.slice(0, 6e3)}`, blockedBy: [], writeScopes: [] });
   return { createActor, send, beginTask, settleTask, interrupt, stop, dispose, leadId };
 }
 
+// workflow/host/model-stats.js
+import { join as join2 } from "node:path";
+import { mkdirSync as mkdirSync2, readFileSync, writeFileSync, renameSync } from "node:fs";
+var SAMPLE_LIMIT = 40;
+var STALE_MS = 30 * 24 * 60 * 60 * 1e3;
+var empty = () => ({ latencyMs: [], tokens: 0, samples: 0, failures: 0, updatedAt: 0 });
+function trim(samples) {
+  return samples.slice(-SAMPLE_LIMIT);
+}
+function median(values) {
+  if (values.length === 0) return void 0;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = sorted.length >> 1;
+  return sorted.length % 2 === 1 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+function score(entry, objective) {
+  if (!entry || entry.samples === 0 && entry.failures === 0) return void 0;
+  const latency = median(entry.latencyMs);
+  const perCall = entry.samples === 0 ? Number.POSITIVE_INFINITY : entry.tokens / entry.samples;
+  const failureRate = entry.failures / Math.max(1, entry.samples + entry.failures);
+  if (objective === "cost") return perCall;
+  if (objective === "latency") return latency ?? Number.POSITIVE_INFINITY;
+  return (latency ?? Number.POSITIVE_INFINITY) + perCall / 100 + failureRate * 1e4;
+}
+function createModelStats(directory) {
+  const path = join2(directory, "model-stats.json");
+  let entries = {};
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8"));
+    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) entries = parsed;
+  } catch {
+  }
+  const keyOf = (route) => `${route.provider}/${route.model}`;
+  let flushTimer;
+  function flush() {
+    flushTimer = void 0;
+    try {
+      mkdirSync2(directory, { recursive: true, mode: 448 });
+      const temp = `${path}.${process.pid}.tmp`;
+      writeFileSync(temp, JSON.stringify(entries), { mode: 384 });
+      renameSync(temp, path);
+    } catch {
+    }
+  }
+  function schedule2() {
+    if (flushTimer !== void 0) return;
+    flushTimer = setTimeout(flush, 1e3);
+    flushTimer.unref?.();
+  }
+  return {
+    /** Record one finished request. Errors count as failures with no latency. */
+    observe(route, { elapsedMs, tokens, failed }) {
+      if (!route?.provider || !route?.model) return;
+      const key = keyOf(route);
+      const entry = entries[key] ?? empty();
+      if (failed) entry.failures += 1;
+      else {
+        if (Number.isFinite(elapsedMs) && elapsedMs >= 0) entry.latencyMs = trim([...entry.latencyMs, Math.round(elapsedMs)]);
+        if (Number.isFinite(tokens) && tokens > 0) entry.tokens += Math.round(tokens);
+        entry.samples += 1;
+      }
+      entry.updatedAt = Date.now();
+      entries[key] = entry;
+      schedule2();
+    },
+    scoreOf(route, objective) {
+      return score(entries[keyOf(route)], objective);
+    },
+    snapshot() {
+      return JSON.parse(JSON.stringify(entries));
+    },
+    /** Drop records nobody has touched for a month. */
+    prune(now = Date.now()) {
+      for (const [key, entry] of Object.entries(entries)) if (now - (entry.updatedAt ?? 0) > STALE_MS) delete entries[key];
+    },
+    flush
+  };
+}
+function pickRoute(routes, { objective, stats }) {
+  if (!Array.isArray(routes) || routes.length === 0) return void 0;
+  if (objective === void 0 || objective === "none" || routes.length === 1) return routes[0];
+  const scored = routes.map((route, index) => ({ route, index, value: stats.scoreOf(route, objective) }));
+  const known = scored.filter((item) => item.value !== void 0);
+  if (known.length === 0) return routes[0];
+  known.sort((a, b) => a.value - b.value || a.index - b.index);
+  return known[0].route;
+}
+
 // workflow/host/dsh-driver.js
 var textBlock = (text3) => [{ type: "text", text: text3 }];
 var READ_TOOLS = /* @__PURE__ */ new Set(["read", "read_image", "glob", "grep", "web_search", "web_fetch", "list_agents", "team_task_list", "team_task_get", "job_output", "job_list", "tool_help", "cordis_inspect_list", "cordis_inspect_query", "session_search", "session_event_search", "session_event_read", "get_goal"]);
@@ -799,12 +887,14 @@ function resolveRoutes(parent, input, analysis) {
   const allowed = savedPolicy?.enabled ? savedPolicy.allowedModels : [];
   if (savedPolicy?.enabled && allowed.length === 0) throw new Error("\u5F53\u524D\u4F1A\u8BDD\u6CA1\u6709\u5141\u8BB8\u7684\u5B50\u4EE3\u7406\u6A21\u578B");
   const defaultRoute = savedPolicy?.enabled && !allowed.some((route) => route.provider === inherited.provider && route.model === inherited.model) ? allowed[0] : inherited;
+  const selected = input.objective && input.objective !== "none" && Array.isArray(input.stats?.candidates) ? pickRoute(input.stats.candidates, { objective: input.objective, stats: input.stats }) : void 0;
   const choose = (provider, model, explicit) => {
     if (explicit && !allowed.some((route) => route.provider === provider && route.model === model)) throw new Error(`\u5B50\u4EE3\u7406\u6A21\u578B ${provider}/${model} \u4E0D\u5728\u5F53\u524D\u4F1A\u8BDD\u5141\u8BB8\u5217\u8868\u4E2D`);
     return provider === inherited.provider && model === inherited.model ? { ...inherited } : { provider, model };
   };
   if (input.provider === void 0 !== (input.model === void 0)) throw new Error("provider \u548C model \u5FC5\u987B\u540C\u65F6\u6307\u5B9A");
-  const base = input.routePin?.base ?? choose(input.provider ?? defaultRoute.provider, input.model ?? defaultRoute.model, input.provider !== void 0 || savedPolicy?.enabled === true);
+  const chosen = selected ?? defaultRoute;
+  const base = input.routePin?.base ?? choose(input.provider ?? chosen.provider, input.model ?? chosen.model, input.provider !== void 0 || savedPolicy?.enabled === true);
   const bindings = { ...input.routePin?.bindings ?? {} };
   for (const reference of analysis.modelReferences ?? []) {
     const name = reference.name ?? reference.model;
@@ -994,7 +1084,7 @@ ${persona.system ?? ""}` });
       route = authorized;
     }
     const link = await native.createActor(actor, persona, route, seed, existing);
-    actors.set(link.sessionId, { actor, persona, tail: Promise.resolve() });
+    actors.set(link.sessionId, { actor, persona, route, tail: Promise.resolve() });
     journal.putActor({ ...existing, runId, ...actor, name: persona.name, persona, sessionId: link.sessionId, resolvedModel: JSON.stringify(route) });
     return { id: link.sessionId };
   }
@@ -1004,7 +1094,7 @@ ${persona.system ?? ""}` });
       sink.askFailed(instance, new WorkflowError2("DriverError", "actor \u4F1A\u8BDD\u672A\u521B\u5EFA"));
       return;
     }
-    const state = { instance, message, sessionId: session.id, accepted: false, finished: false, toolCalls: 0, worldToolCalls: 0, turns: 0 };
+    const state = { instance, message, sessionId: session.id, accepted: false, finished: false, toolCalls: 0, worldToolCalls: 0, turns: 0, startedAt: Date.now() };
     states.set(refToString2(instance), state);
     owner.tail = addTask(owner.tail.then(async () => {
       if (closing || signal.aborted || state.cancelled) return;
@@ -1032,6 +1122,7 @@ ${JSON.stringify(message.schema)}` : message.instructions;
         const fresh = snapshot.events.slice(state.statsEventCount ?? state.startSeq ?? 0);
         const tokens = fresh.reduce((total, event) => total + (event.type === "assistant/message" ? event.data.usage?.totalTokens ?? (event.data.usage?.inputTokens ?? 0) + (event.data.usage?.outputTokens ?? 0) : 0), 0);
         sink.askStats(instance, { tokens, toolCalls: state.toolCalls - (state.statsTools ?? 0), worldToolCalls: state.worldToolCalls - (state.statsWorldTools ?? 0), turns: 1 });
+        config.observeModel?.(owner.route, { elapsedMs: Date.now() - state.startedAt, tokens, failed: state.reason?.kind !== "completed" });
         state.statsTools = state.toolCalls;
         state.statsWorldTools = state.worldToolCalls;
         state.statsEventCount = snapshot.events.length;
@@ -1148,13 +1239,26 @@ var labelOf = (value) => {
   if (typeof value !== "string" || !value.trim() || value.length > 120) fail("\u5DE5\u4F5C\u6D41\u540D\u79F0\u5FC5\u987B\u662F 1\u2013120 \u4E2A\u5B57\u7B26");
   return value.trim();
 };
+var ROUTING_OBJECTIVES = /* @__PURE__ */ new Set(["none", "latency", "cost", "balanced"]);
+var routingOf = (value) => {
+  if (value === void 0) return "none";
+  if (!ROUTING_OBJECTIVES.has(value)) fail("\u8DEF\u7531\u76EE\u6807\u5FC5\u987B\u662F none\u3001latency\u3001cost \u6216 balanced");
+  return value;
+};
 async function createWorkflowManager(ctx, options = {}) {
-  const directory = options.storeDir ?? join2(process.env.DSH_HOME ?? join2(homedir(), ".dsh"), "composer-assist", "workflows");
+  const directory = options.storeDir ?? join3(process.env.DSH_HOME ?? join3(homedir(), ".dsh"), "composer-assist", "workflows");
   const journal = await openJournal(directory);
+  const modelStats = createModelStats(directory);
+  modelStats.prune();
+  const routingInput = (parent, meta) => {
+    const candidates = parent.ctx.get("subagentModelSelection")?.current()?.allowedModels ?? [];
+    const objective = meta.routing === void 0 ? "none" : meta.routing;
+    return { ...meta, objective, stats: { candidates, scoreOf: (route, goal) => modelStats.scoreOf(route, goal) } };
+  };
   const compiler = createCompilerScope();
   const { compile, requireCompiled, compileHole } = compiler;
-  const scriptDirectory = join2(directory, "sandbox");
-  mkdirSync2(scriptDirectory, { recursive: true, mode: 448 });
+  const scriptDirectory = join3(directory, "sandbox");
+  mkdirSync3(scriptDirectory, { recursive: true, mode: 448 });
   const active = /* @__PURE__ */ new Map();
   const starting = /* @__PURE__ */ new Map();
   const listeners = /* @__PURE__ */ new Set();
@@ -1286,7 +1390,7 @@ async function createWorkflowManager(ctx, options = {}) {
     starting.set(meta.id, gate);
     try {
       const compiled = await requireCompiled(journal.getRun(meta.id)?.scriptText ?? meta.script);
-      const routes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, meta, compiled.analysis);
+      const routes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, routingInput(parent, meta), compiled.analysis);
       checked(parent, meta.id);
       if (gate.cancelled) fail("\u5DE5\u4F5C\u6D41\u542F\u52A8\u5DF2\u7ECF\u53D6\u6D88");
       if (!meta.routePin) {
@@ -1396,7 +1500,7 @@ async function createWorkflowManager(ctx, options = {}) {
           broadcast(meta.id, parent.id, event);
           touch(meta.id);
         };
-        const config = { hostContext: ctx, cwd: meta.cwd, journal: ownJournal, runId: meta.id, sink, signal: controller.signal, emit, routes, askQuestion, recordEffect, settleEffect, concurrency: meta.concurrency };
+        const config = { hostContext: ctx, cwd: meta.cwd, journal: ownJournal, runId: meta.id, sink, signal: controller.signal, emit, routes, askQuestion, recordEffect, settleEffect, concurrency: meta.concurrency, observeModel: (route, sample) => modelStats.observe(route, sample) };
         const driver = options.driverFactory ? options.driverFactory(parent, config) : createDshDriver(parent, config);
         running2.driver = driver;
         return driver;
@@ -1441,8 +1545,8 @@ async function createWorkflowManager(ctx, options = {}) {
       const compiled = await requireCompiled(script);
       assertParent(parent);
       const id = randomUUID2();
-      const meta = { id, sessionId: parent.id, cwd: cwdOf(parent), name: labelOf(input.name), script, args: argsOf(input.args), concurrency: concurrencyOf(input.concurrency), ...input.provider === void 0 ? {} : { provider: input.provider, model: input.model }, createdAt: Date.now(), updatedAt: Date.now() };
-      if (!options.resolveRoutes) resolveRoutes(parent, meta, compiled.analysis);
+      const meta = { id, sessionId: parent.id, cwd: cwdOf(parent), name: labelOf(input.name), script, args: argsOf(input.args), concurrency: concurrencyOf(input.concurrency), ...routingOf(input.routing) === "none" ? {} : { routing: routingOf(input.routing) }, ...input.provider === void 0 ? {} : { provider: input.provider, model: input.model }, createdAt: Date.now(), updatedAt: Date.now() };
+      if (!options.resolveRoutes) resolveRoutes(parent, routingInput(parent, meta), compiled.analysis);
       storeMeta(meta);
       broadcast(id, parent.id, { type: "draft-prepared", id });
       return snapshot(parent, id);
@@ -1517,7 +1621,7 @@ async function createWorkflowManager(ctx, options = {}) {
       const args = input.args === void 0 ? row.args ?? {} : argsOf(input.args);
       const concurrency = concurrencyOf(input.concurrency ?? row.caps.maxConcurrency);
       const nextMeta = { ...meta, id: randomUUID2(), script, args, concurrency, ...input.name === void 0 ? {} : { name: labelOf(input.name) }, ...input.provider === void 0 ? {} : { provider: input.provider, model: input.model, routePin: void 0 }, createdAt: Date.now(), updatedAt: Date.now() };
-      if (!options.resolveRoutes) resolveRoutes(parent, nextMeta, compiled.analysis);
+      if (!options.resolveRoutes) resolveRoutes(parent, routingInput(parent, nextMeta), compiled.analysis);
       if (holds(input.id).some((hold) => hold.state === "unknown")) fail("\u524D\u9A71\u5B58\u5728\u7ED3\u679C\u672A\u77E5\u7684\u64CD\u4F5C\uFF0C\u5148\u5904\u7406\u540E\u518D\u4FEE\u8BA2", "WorkflowRecoveryHeld");
       if (script === row.scriptText && inputHash(args) === inputHash(row.args ?? {}) && input.provider === void 0) {
         storeMeta({ ...meta, concurrency });
@@ -1555,7 +1659,7 @@ async function createWorkflowManager(ctx, options = {}) {
       if (!run?.control) fail("\u5DE5\u4F5C\u6D41\u5F53\u524D\u672A\u8FD0\u884C\uFF0C\u65E0\u6CD5\u8865\u5168\u7559\u767D");
       const { script, compiled } = await compileHole(journal.getRun(id).scriptText, holeId, body);
       checked(parent, id);
-      const nextRoutes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, meta, compiled.analysis);
+      const nextRoutes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, routingInput(parent, meta), compiled.analysis);
       Object.assign(run.routes.bindings, nextRoutes.bindings);
       const result = run.control.fillHole({ siteId: holeId, code: compiled.lowered.holeBodies[holeId], script: { text: script, hash: compiled.hash }, askSpecs: compiled.askSpecs, sitePhases: compiled.sitePhases, ...compiled.analysis.phases, filledBy: parent.id });
       if (!result.ok) fail(`\u7559\u767D\u6CA1\u6709\u53EF\u8865\u5168\u7684\u7B49\u5F85\u5206\u652F\uFF1A${result.reason}`);
@@ -1722,6 +1826,7 @@ async function apply(ctx) {
         concurrency: { type: "integer", minimum: 1, maximum: 64 },
         provider: { type: "string" },
         model: { type: "string" },
+        routing: { type: "string", enum: ["none", "latency", "cost", "balanced"], description: "How to pick among the session-approved subagent models once this machine has observed them: fastest median latency, fewest reported tokens, a blend that also penalises failures, or none to keep the first approved route." },
         scope: { type: "string", enum: ["project", "global"] },
         questionId: { type: "string" },
         answer: { type: "string" },

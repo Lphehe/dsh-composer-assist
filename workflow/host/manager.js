@@ -8,6 +8,7 @@ import { openJournal } from './journal.js'
 import { createCompilerScope } from './compile.js'
 import { createDshDriver, resolveRoutes } from './dsh-driver.js'
 import { parkWorkflowMessages } from './native-team.js'
+import { createModelStats } from './model-stats.js'
 
 const terminal = new Set(['completed', 'errored', 'stopped'])
 const fail = (message, code = 'WorkflowError') => { const error = new Error(message); error.code = code; throw error }
@@ -16,11 +17,24 @@ const argsOf = value => { if (value === undefined) return {}; if (!value || type
 const concurrencyOf = value => { const count = value ?? 4; if (!Number.isInteger(count) || count < 1 || count > 64) fail('并发数必须是 1–64 的整数'); return count }
 const cwdOf = parent => parent.ctx.get?.('workingDirectory')?.get(parent.session) ?? parent.session.header.cwd
 const labelOf = value => { if (value === undefined) return '动态工作流'; if (typeof value !== 'string' || !value.trim() || value.length > 120) fail('工作流名称必须是 1–120 个字符'); return value.trim() }
+const ROUTING_OBJECTIVES = new Set(['none', 'latency', 'cost', 'balanced'])
+const routingOf = value => { if (value === undefined) return 'none'; if (!ROUTING_OBJECTIVES.has(value)) fail('路由目标必须是 none、latency、cost 或 balanced'); return value }
 
 /** Host state is private; project files and commands use only the parent's scoped providers. */
 export async function createWorkflowManager(ctx, options = {}) {
   const directory = options.storeDir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'composer-assist', 'workflows')
   const journal = await openJournal(directory)
+  // Observed per-model latency/token/failure numbers, shared by every run in this
+  // store. Selection only consults it when a caller asks for an objective.
+  const modelStats = createModelStats(directory)
+  modelStats.prune()
+  // Routes the current session is allowed to use, plus the observations that let
+  // resolveRoutes rank them when the run asked for a routing objective.
+  const routingInput = (parent, meta) => {
+    const candidates = parent.ctx.get('subagentModelSelection')?.current()?.allowedModels ?? []
+    const objective = meta.routing === undefined ? 'none' : meta.routing
+    return { ...meta, objective, stats: { candidates, scoreOf: (route, goal) => modelStats.scoreOf(route, goal) } }
+  }
   const compiler = createCompilerScope()
   const { compile, requireCompiled, compileHole } = compiler
   const scriptDirectory = join(directory, 'sandbox')
@@ -129,7 +143,7 @@ export async function createWorkflowManager(ctx, options = {}) {
     starting.set(meta.id, gate)
     try {
     const compiled = await requireCompiled(journal.getRun(meta.id)?.scriptText ?? meta.script)
-    const routes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, meta, compiled.analysis)
+    const routes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, routingInput(parent, meta), compiled.analysis)
     checked(parent, meta.id)
     if (gate.cancelled) fail('工作流启动已经取消')
     if (!meta.routePin) { meta = { ...meta, routePin: jsonCopy(routes) }; storeMeta(meta) }
@@ -218,7 +232,7 @@ export async function createWorkflowManager(ctx, options = {}) {
     }
     const runOptions = { runId: meta.id, name: meta.name, scriptText: existing?.scriptText ?? meta.script, scriptHash: compiled.hash, lowered: compiled.lowered.code, args: existing?.args ?? meta.args, caps: { maxConcurrency: existing?.caps.maxConcurrency ?? meta.concurrency }, askSpecs: compiled.askSpecs, sitePhases: compiled.sitePhases, validate, cwd: scriptDirectory, parentSessionId: parent.id, signal: controller.signal, ...(source ? { resumedFrom: source } : {}), ...(predecessor ? { importedCache: importedCache(predecessor), inheritedTokens: predecessor.spentTokens } : {}), launch: { inputId: meta.id, ...compiled.analysis.phases, subagentModel: `${routes.base.provider}/${routes.base.model}`, modelBindings: Object.fromEntries(Object.entries(routes.bindings).map(([name, route]) => [name, `${route.provider}/${route.model}`])) }, control: { bind: engine => { running.control = engine } }, makeDriver: sink => {
       const emit = event => { broadcast(meta.id, parent.id, event); touch(meta.id) }
-      const config = { hostContext: ctx, cwd: meta.cwd, journal: ownJournal, runId: meta.id, sink, signal: controller.signal, emit, routes, askQuestion, recordEffect, settleEffect, concurrency: meta.concurrency }
+      const config = { hostContext: ctx, cwd: meta.cwd, journal: ownJournal, runId: meta.id, sink, signal: controller.signal, emit, routes, askQuestion, recordEffect, settleEffect, concurrency: meta.concurrency, observeModel: (route, sample) => modelStats.observe(route, sample) }
       const driver = options.driverFactory ? options.driverFactory(parent, config) : createDshDriver(parent, config)
       running.driver = driver
       return driver
@@ -249,8 +263,8 @@ export async function createWorkflowManager(ctx, options = {}) {
       const compiled = await requireCompiled(script)
       assertParent(parent)
       const id = randomUUID()
-      const meta = { id, sessionId: parent.id, cwd: cwdOf(parent), name: labelOf(input.name), script, args: argsOf(input.args), concurrency: concurrencyOf(input.concurrency), ...(input.provider === undefined ? {} : { provider: input.provider, model: input.model }), createdAt: Date.now(), updatedAt: Date.now() }
-      if (!options.resolveRoutes) resolveRoutes(parent, meta, compiled.analysis)
+      const meta = { id, sessionId: parent.id, cwd: cwdOf(parent), name: labelOf(input.name), script, args: argsOf(input.args), concurrency: concurrencyOf(input.concurrency), ...(routingOf(input.routing) === 'none' ? {} : { routing: routingOf(input.routing) }), ...(input.provider === undefined ? {} : { provider: input.provider, model: input.model }), createdAt: Date.now(), updatedAt: Date.now() }
+      if (!options.resolveRoutes) resolveRoutes(parent, routingInput(parent, meta), compiled.analysis)
       storeMeta(meta)
       broadcast(id, parent.id, { type: 'draft-prepared', id })
       return snapshot(parent, id)
@@ -275,7 +289,7 @@ export async function createWorkflowManager(ctx, options = {}) {
       const args = input.args === undefined ? row.args ?? {} : argsOf(input.args)
       const concurrency = concurrencyOf(input.concurrency ?? row.caps.maxConcurrency)
       const nextMeta = { ...meta, id: randomUUID(), script, args, concurrency, ...(input.name === undefined ? {} : { name: labelOf(input.name) }), ...(input.provider === undefined ? {} : { provider: input.provider, model: input.model, routePin: undefined }), createdAt: Date.now(), updatedAt: Date.now() }
-      if (!options.resolveRoutes) resolveRoutes(parent, nextMeta, compiled.analysis)
+      if (!options.resolveRoutes) resolveRoutes(parent, routingInput(parent, nextMeta), compiled.analysis)
       if (holds(input.id).some(hold => hold.state === 'unknown')) fail('前驱存在结果未知的操作，先处理后再修订', 'WorkflowRecoveryHeld')
       if (script === row.scriptText && inputHash(args) === inputHash(row.args ?? {}) && input.provider === undefined) {
         storeMeta({ ...meta, concurrency })
@@ -311,7 +325,7 @@ export async function createWorkflowManager(ctx, options = {}) {
       if (!run?.control) fail('工作流当前未运行，无法补全留白')
       const { script, compiled } = await compileHole(journal.getRun(id).scriptText, holeId, body)
       checked(parent, id)
-      const nextRoutes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, meta, compiled.analysis)
+      const nextRoutes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, routingInput(parent, meta), compiled.analysis)
       Object.assign(run.routes.bindings, nextRoutes.bindings)
       const result = run.control.fillHole({ siteId: holeId, code: compiled.lowered.holeBodies[holeId], script: { text: script, hash: compiled.hash }, askSpecs: compiled.askSpecs, sitePhases: compiled.sitePhases, ...compiled.analysis.phases, filledBy: parent.id })
       if (!result.ok) fail(`留白没有可补全的等待分支：${result.reason}`)
