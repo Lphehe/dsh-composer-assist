@@ -6,18 +6,17 @@
     "build": "node scripts/build-client.mjs",
     "selfcheck": "node selfcheck.mjs && node scripts/bundle-freshness-selfcheck.mjs"
   },
-  "dependencies": {
-    "@zcode/dynamic-workflow": "file:vendor/zcode/dynamic-workflow",
-    "@zcode/dynamic-workflow-runtime": "file:vendor/zcode/dynamic-workflow-runtime",
-    "typescript": "5.9.3"
-  },
+  "dependencies": {},
   "engines": {
     "node": ">=22.13.0"
   },
   "devDependencies": {
     "@types/node": "24.12.3",
     "vitest": "4.1.5",
-    "esbuild": "^0.25.12"
+    "esbuild": "^0.25.12",
+    "@zcode/dynamic-workflow": "file:vendor/zcode/dynamic-workflow",
+    "@zcode/dynamic-workflow-runtime": "file:vendor/zcode/dynamic-workflow-runtime",
+    "typescript": "5.9.3"
   },
   "type": "module",
   "description": "Context-aware composer prediction for DeepSeek Harness: predicts the next message after each turn, completes a draft while typing, and rewrites a prompt on demand; multiple searchable candidates, per-session suggestions, and supersede-safe responses.",
