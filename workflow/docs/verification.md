@@ -161,6 +161,50 @@
 - [机器核验记录](<evidence-0.6.4/acceptance-check.json>) 校验了五节点标签、保留的完成/失败状态、四图、阶段/日志/结果/缩放/编辑器/详情及正式截图 02–15 的 PNG 与 SHA256。01 是新会话入口定位截图，不作节点通过证据。最终七表内容指纹与修复安装前完全一致：9 run、13 actor、33 node、207 event、76 document、4 effect、2 artifact；原应用 codesign 深度严格检查和 git diff --check 均通过。
 - 边界：本次覆盖的非付费界面交互未发现回归。未点击启动、停止、恢复、修订、保存、分析、预测/润色或发送，不能将这轮验收说成执行/写入路径或所有模型供应商的端到端重跑；非空产物下载、移动端、深色及整宿主重启恢复未重验。未改会话历史、业务数据或其他功能代码。
 
+### 0.6.4 客户端整体UI整改（2026-10-24，本轮）
+
+用户明确不接受旧版表单式工作流界面，并指出Tab没有可见反馈。本轮是已授权的整体UI整改；旧轮GUI功能覆盖不等于用户视觉接受。只更新客户端，保持现有包版本、运行层与编译器产物，未重新开发执行链路、修改owner/cwd或重跑产品工作流。
+
+- 根因是独立`editorOpen`始终把大表单放在各Tab之前，内容变化藏在下方。现统一为五个互斥视图；默认画布，脚本配置独立工作面；桌面脚本/配置双列、窄屏重排，顶部唯一保存/生命周期操作，原始数据折叠保留，人工问题/留白/未知效果处理器保留在共享层。
+- 实际注册组件回归覆盖默认画布、五Tab、键盘环绕/Home/End、修饰键不劫持、草稿往返及空预览指令说明。API、启动、参数校验、会话选择及三类人工干预处理器与基线一致。完整selfcheck（含恢复与产物新鲜度）、diff及原App深度严格签名检查通过。
+- 定点构建客户端后，只对`include:composer-assist`执行停用/恢复启用，最后enabled/applied；未管理重载工作流Host。管理器同时报告的账户模型配置、另一个codex-workflow注入及重复PTY三项既有警告未在本轮处理。共享目录其它会话的打包/运行层提交均保留，未回退或混为UI成果，未提交/推送。
+- 最终客户端SHA256为`eed0664790ae6163b09aebc811b40b59117dbdc087ee048f0c8b9fbd08fe1e93`，Host为`e85aaa429deeb1b4a8af1160970d30f7064601f8705d2cb7f26ed3773503775f`，编译器为`09b2a74173d4b8f4bc045a966c2578912940553447c6143e7a3419181dd5781d`。
+
+### 恢复可用：两个真实缺陷（2026-10-24 下午）
+
+面板一度整页报 `Unexpected token 'o', "not found" is not valid JSON`，两个独立原因都已定位并修复，均为环境/契约问题而非样式问题：
+
+1. **运行产物与磁盘不一致**：应用15:53启动，`dist/*.js`在15:56被并发会话重写，运行中的Host加载了构建中途产物，工作流路由未注册，请求返回纯文本`not found`而被客户端当JSON解析。重建产物并重载工作流Host入口后恢复。
+2. **`agentTeams`硬性注入**：`workflow/plugin.js`的`inject`包含`agentTeams`，而desktop profile的`agent-teams`条目是`disabled: true`，入口永久停在`pending (waiting for service: agentTeams)`，整个面板不可加载。改为运行期惰性获取（`createNativeTeam`缺该服务时本就抛明确错误），面板可正常加载，启用Teams后原生成员能力不受影响。
+
+修复后完整`pnpm run selfcheck`、产物新鲜度、`git diff --check`、原应用深度严格签名检查均通过。
+
+现场实测（原签名App PID1732、窗口2056×1211、GUI端口56598）：
+
+| 实测项目 | 结果及证据 |
+| --- | --- |
+| 五视图互斥 | 逐个点击流程图/阶段进度/节点与日志/结果与产物/脚本与配置，选中态与内容真实切换；脚本页textarea由1增至3、其余视图为1。见[流程图](</Users/Admin/dsh插件/docs/evidence-ui-20261024/2026-10-24-tab-流程图.png>)、[脚本与配置](</Users/Admin/dsh插件/docs/evidence-ui-20261024/2026-10-24-tab-脚本与配置.png>)。 |
+| 首屏画布 | 流程图首屏直接呈现画布、四类图与指标，编辑器不再挡住内容。 |
+| 脚本工作台 | 左代码右设置，底部为分析/启动/修订；顶部仅保留新建、保存、生命周期操作。 |
+| 历史数据 | 七表未变：10 run /14 actor /35 node /217 event /83 document /4 effect /2 artifact，无活动运行；99f021aa ask#2→stopped、38e8b170与b8a13eba各两节点→cancelled，99f021aa ask#1保留failed，原始running检查点未改写。 |
+
+仍未覆盖：移动端、深色、付费执行/写入、所有供应商及整宿主重启恢复；未点击运行、保存、停止、恢复、修订或模型调用，未启动付费流程，未改owner/cwd。共享目录中`client.js`另有其它会话进行中的“接受预测后保留”改动（约280行），本轮未回退、未提交，`dist`按当前全部源码一致重建因而包含该改动，提交前需各自负责人确认归属。未提交或推送。视觉最终由用户判定。
+
+独立现场验收使用原签名App PID63192、窗口83041，直接查看真实截图像素与AX状态，无替代页面、服务器或伪造数据。首版整改客户端无需刷新即出现五Tab；最终只补了空预览详情的缺值说明，后续复核另记。
+
+| 实测项目 | 结果及证据 |
+| --- | --- |
+| 默认画布/五Tab | [更新前](</Users/Admin/dsh插件/docs/evidence-ui-20261024/before-ui.png>)大编辑器；[更新后工作台](</Users/Admin/dsh插件/docs/evidence-ui-20261024/after-workbench.png>)不再挂表单。四个非脚本页textarea均为0，脚本页为2；所有Tab点击、Home/End及左右键实际选中/焦点变化已核对。 |
+| 脚本配置/草稿 | [宽屏双列](</Users/Admin/dsh插件/docs/evidence-ui-20261024/after-script.png>)，选择器实测360px；469字符脚本与2字符args往返哈希不变，匹配更新前私有备份，无自定义内容丢弃。 |
+| 免费预览/四图 | 点击一次静态分析回画布，[真实编译预览](</Users/Admin/dsh插件/docs/evidence-ui-20261024/after-graph.png>)为4节点/4边；四类图选择状态互斥，100%→115%→100%，阶段为调查/复核、均待执行，未创建运行。 |
+| 阶段/详情/结果 | [阶段](</Users/Admin/dsh插件/docs/evidence-ui-20261024/after-phases.png>)、ask预览跳详情及[结果空态](</Users/Admin/dsh插件/docs/evidence-ui-20261024/after-results.png>)已核对。首轮发现无已保留指令时详情空白，已补诚实缺值说明并加先红后绿回归，不编造动态输入；首轮旧详情图仅作问题证据。 |
+| 窄桌面 | 真实840×900的[脚本配置](</Users/Admin/dsh插件/docs/evidence-ui-20261024/after-script-narrow.png>)与[画布](</Users/Admin/dsh插件/docs/evidence-ui-20261024/after-graph-narrow.png>)未见明显裁切，工具栏、设置、底部操作可见。因设置均容纳，未实际触发溢出滚动。 |
+| 原归属历史 | 通过公开侧栏进入原会话，未绕owner/cwd。[b8a13eba](</Users/Admin/dsh插件/docs/evidence-ui-20261024/history-stopped.png>)两已创建ask显示已停止、三未创建仍待执行；[8ebeb50c结果](</Users/Admin/dsh插件/docs/evidence-ui-20261024/history-completed-results.png>)已完成5/5，真实最终结果与1条报告保留。完成图有一张加载中快照，不作完成图通过证据。 |
+
+[独立现场原始记录](</Users/Admin/dsh插件/docs/evidence-ui-20261024/live-acceptance.json>)保留真实结果与初轮问题，不回改成全通过。另两条停止历史未逐一打开；使用当前只读正式库与未改的共享状态helper核对[五停止/五完成](</Users/Admin/dsh插件/docs/evidence-ui-20261024/legacy-status-check.json>)：4 cancelled+1 stopped，五原始running恢复检查点不变，此项不冒充新GUI逐条覆盖。
+
+本轮基线已是10 run /14 actor /35 node /217 event /83 document /4 effect /2 artifact，不沿用上轮9条数量；[七表指纹](</Users/Admin/dsh插件/docs/evidence-ui-20261024/integrity-after-client.json>)一致。没有点击运行、保存、停止、恢复、修订或模型调用，静态编译不属于真实执行验收。移动端、深色、付费执行/写入/所有供应商及整宿主重启恢复未重验；视觉最终由用户判定。窗口/起始会话恢复与最终缺值说明截图由后续小范围复核记录，不以初轮2×1px尺寸差宣称完全还原。
+
 ## 已知验证限制与运行风险
 
 - 0.3.1 小屏验证曾因测试浏览器页面无响应而未完成；本轮宿主重启后，Ego 任务空间 18 在当前地址仍显示认证提示，刷新后也未进入应用，因此 **0.4.2 手机溢出、按钮遮挡和 GUI 启动未实测通过**。Client Slot 查询只确认入口已注册，不能代替真实 DOM/点击验证；旧版桌面证据也不能冒充新版小屏证据。

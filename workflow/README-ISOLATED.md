@@ -3,6 +3,22 @@
 这个目录是从 ZCode 移植的动态工作流实现（编译器、执行引擎、DSH 适配层、画布 UI）。
 它**仍然保留在这里**，但从 0.7.0 起已经与本包解耦：
 
+## 文档位置
+
+工作流的文档与截图证据都在 `workflow/docs/`，不在仓库根的 `docs/`：
+
+| 文件 | 内容 |
+|---|---|
+| `docs/dynamic-workflows.md` | 用户说明：入口、编写、运行、恢复 |
+| `docs/verification.md` | 各版本验收记录 |
+| `docs/动态工作流验收合同.md` | 验收合同 |
+| `docs/workflow-recovery-receipt.md` | 恢复回执 |
+| `docs/orchestration-baseline-3748c082.md` | 编排基线实跑记录 |
+| `docs/evidence-0.6.2/`、`docs/evidence-0.6.4/` | 界面截图与可访问性树证据 |
+| `docs/workflow-compact.png` | 画布缩略图 |
+
+根 `docs/` 只保留输入预测相关的验收文档。
+
 ## 现状
 
 | 方面 | 状态 |
