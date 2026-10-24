@@ -20,7 +20,7 @@
     "esbuild": "^0.25.12"
   },
   "type": "module",
-  "description": "Context-aware composer prediction and ZCode dynamic workflows for DeepSeek Harness: draft completion, prompt polishing, per-session suggestions and stale-response protection; typed actors, live graphs, durable runs and checkpoint recovery.",
+  "description": "Context-aware composer prediction for DeepSeek Harness: predicts the next message after each turn, completes a draft while typing, and rewrites a prompt on demand; multiple searchable candidates, per-session suggestions, and supersede-safe responses.",
   "license": "SEE LICENSE IN LICENSE",
   "exports": {
     ".": "./index.js",
