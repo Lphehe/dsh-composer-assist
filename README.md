@@ -47,7 +47,7 @@ git clone https://github.com/lphehe-bot/dsh-composer-assist.git ~/.dsh/local/com
 
 ```bash
 cd ~/.dsh/local/composer-assist
-pnpm install --ignore-scripts
+pnpm install --frozen-lockfile
 pnpm run build
 pnpm run selfcheck
 ```
