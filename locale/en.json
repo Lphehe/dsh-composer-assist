@@ -1,6 +1,6 @@
 {
   "meta": {
     "title": "Composer prediction",
-    "description": "Predicts what you are about to type above the composer, completes a draft, and polishes it on demand."
+    "description": "Context-aware next-message predictions, draft completion and prompt polishing, with per-session suggestions and stale-response protection. Tab inserts into the draft without sending."
   }
 }

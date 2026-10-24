@@ -1,4 +1,4 @@
-# 输入框预测 · Composer prediction
+# 输入框预测与动态工作流 · Composer Assist
 
 > **中文**：根据当前对话和你说话的方式，在输入框上方给出你下一条最可能发的消息，按 Tab 即可采用；同时支持输入时补全草稿、一键润色提示词。
 >
@@ -22,14 +22,34 @@
 | 手动预测 | Predict on demand from the composer tool row |
 | 草稿补全 | Completes the second half of a draft as you type |
 | 润色提示词 | Rewrites the current draft into a clearer instruction |
+| ZCode 动态工作流 | Typed persistent actors, live graphs, saved runs, stop/resume and amended continuation |
+
+动态工作流入口：会话第二排 → **工作流**。中间主区域默认展示按真实阶段分组的代理节点画布；在顶部选择运行或已保存流程，按需编辑脚本、查看阶段／节点日志／结果与产物，不使用工作流右侧栏。聊天只保留真实进度摘要。先分析并确认脚本，再运行真实子 Agent。完整操作、构建与恢复边界见 [动态工作流说明](<docs/dynamic-workflows.md>)。
 
 按 **Tab** 接受建议（填进草稿但不发送），**Esc** 隐藏，「忽略」按钮则永久丢弃。草稿为空时 **←/→** 在候选之间切换（按住修饰键、或输入法正在组合时不会拦截方向键）。
 Tab accepts a suggestion (fills the draft, does not send); Esc hides it; the dismiss button forgets it. With an empty draft, **←/→** cycles between candidates (arrows are left alone while a modifier is held or an IME is composing).
+
+## 本机开发目录
+
+新项目会话续作先读 [交接说明](<交接.md>)，避免重做已完成工作或误改历史记录归属。
+
+规范目录为 `/Users/Admin/dsh插件`，原开发工作树已通过 `git worktree move` 迁至此处，不是另复制一份。Git 历史仍关联原 Composer 仓库，暂未拆成独立仓库；不要删除其主仓库的 Git 元数据。原桌面通过本地 bundle 链接加载这里，运行数据库仍留在原私有数据目录。经用户确认，仅将本父会话9条记录的目录归属更新到新根，ID、日志和结果不变。旧开发路径保留为指向本目录的兼容链接，解决当前宿主仍解析旧绝对路径的缓存；它不是第二份源码，确认宿主冷启动后可独立核查是否仍需保留，当前不要删除。
+
+本机开发、构建和 `plugin_manager install_bundle` 均使用此目录。以下 clone 示例仅供新机器首次安装，本机不要据此再建第二份。
 
 ## 安装 · Install
 
 ```bash
 git clone https://github.com/lphehe-bot/dsh-composer-assist.git ~/.dsh/local/composer-assist
+```
+
+首次从源码安装请先构建（需要 Node.js 22.13+）：
+
+```bash
+cd ~/.dsh/local/composer-assist
+pnpm install --ignore-scripts
+pnpm run build
+pnpm run selfcheck
 ```
 
 再用 `plugin_manager` 把该目录作为 bundle 安装：
@@ -66,6 +86,19 @@ Settings live in `$DSH_HOME/composer-assist/settings.json`.
 建议栏上的「置信度」是模型的自评，只显示为高/中/低三档，不是校准过的概率。
 The confidence on the bar is the model's own rough self-assessment, shown only as high/medium/low — not a calibrated probability.
 
+## 请求耗时 · Request timing
+
+预测、补全和润色请求会在输入框上方显示一行状态。进行中只更新本地总等待和已知的响应校验阶段；完成或超时后显示 **排队 / 准备 / 模型 / 校验** 的毫秒或秒数，超时标明最后已知阶段。未取得的数据为 `—`，只取得浏览器校验部分时用 `≥` 标明下界，不猜测服务端阶段。
+
+- 排队：等待同类上一笔尚未退出的辅助调用，不含输入防抖。
+- 准备：读取上下文、拼接提示词、解析路由和 `prepareCall`。
+- 模型：实际流式调用，含网络和供应商内部等待，不能当作纯计算时间。
+- 校验：Host 来源/候选校验，加浏览器响应解析与来源核对；总时间还包含少量传输、页面开销。
+
+统计仅在当前页面内存中保留最近 8 个会话的最新请求，不记录正文、不写会话日志或磁盘；刷新清除。无新增轮询或付费调用，旧请求不能覆盖新请求统计，现有硬超时、草稿与候选保护保持不变。
+
+Prediction, completion and polish show elapsed time while waiting and measured queue/prepare/model/validate durations after completion or timeout. Unknown durations stay unknown; model time includes provider/network wait. Only the latest request for 8 sessions is retained in page memory, without prompt text, polling or extra model calls.
+
 ## 设计要点 · Design notes
 
 - **不写会话日志**：预测是 `ctx.llm.prepareCall()` 的辅助调用，不进入对话历史。
@@ -83,9 +116,17 @@ The confidence on the bar is the model's own rough self-assessment, shown only a
 
 ## 实现说明 · Implementation notes
 
-`display: inline`（行内模式）在输入框所在的相对定位容器里插入一个自己的绝对定位 ghost，并临时隐藏宿主占位符——宿主的 `--dsh-composer-hint` 画在占位符之后，空草稿时会被占位符盖住，所以本插件不用它。该模式依赖宿主的 `[data-composer-card]` / `[data-composer-input]` 标记；DSH 升级后若标记改名，行内 ghost 会静默不再显示（不报错、不污染草稿）。默认的 `bar` 模式不依赖宿主内部标记，只使用主题变量。
+`display: inline`（行内模式）在空草稿上显示一个非编辑预览，与编辑器共享网格区域并隐藏 placeholder；换行会撑开输入区域。草稿补全复用宿主的 `--dsh-composer-hint`，跟随文字末尾排版。继续编辑使原建议与草稿不匹配时，行内预览隐藏，候选仍保留在建议栏。接受、切换会话或退出行内模式时会清理插件拥有的提示。
 
-The `display: inline` mode inserts its own absolutely-positioned ghost into the composer's positioned container and hides the host placeholder while it shows — the host's `--dsh-composer-hint` paints after the placeholder, which is exactly what covers it on an empty draft, so this plugin does not use it. That mode relies on the host's `[data-composer-card]` / `[data-composer-input]` markers; if a DSH upgrade renames them, the inline ghost silently stops showing — no error, no draft corruption. The default `bar` mode uses only theme variables and no host-internal markers.
+Inline mode shows a non-editable preview over an empty editor, shares its grid area, and hides the placeholder; wrapped text expands the input area. Draft continuations use the host's `--dsh-composer-hint` at the end of the text. Editing a draft hides a mismatched inline preview while keeping the candidate in the suggestion bar. Accepting, switching sessions, or leaving inline mode clears the plugin's own hints.
+
+预览使用清晰的灰色，常显「预览 · 未填入草稿」与键盘提示；只有 Tab 或接受按钮会填入草稿。候选、选中位置和生成状态按会话保存在页面内存中，切换会话及重载插件会恢复；整页刷新会清空这份内存缓存。
+
+Readable gray text and visible preview/keyboard hints distinguish suggestions from the draft; only Tab or the accept button inserts them. Per-session candidates, selection, and generation state survive session switches and plugin remounts in page memory. A full page refresh clears this cache.
+
+行内显示依赖宿主的 `[data-composer-card]` / `[data-composer-input]` 标记及原生提示样式；DSH 升级改名后需要适配。Tab 接受也依赖消息输入框标记，以免搜索等其他输入框误接受候选。
+
+Inline rendering relies on the host's composer markers and native hint styles, which may need adapting after a DSH upgrade. Tab acceptance also checks the message-editor marker so other editable fields, such as search, cannot accept a candidate.
 
 ## 成本提醒 · Cost warning
 
@@ -100,4 +141,10 @@ After cloning, run `node selfcheck.mjs` for parser, learning-counter and context
 
 ## 许可证 · License
 
-MIT
+原创程序代码采用“源码可见、禁止修改”条款，并非开放源代码许可证。允许使用未经修改的版本；未经著作权人事先书面许可，不得修改本软件、制作衍生版本或分发修改版本。完整条款见 [LICENSE](LICENSE)。用户自己的配置、输入、输出和工作流脚本不受本项修改限制。
+
+The original program code is source-available under use-permitted, modification-prohibited terms, not an open-source license. Use of the unmodified software is permitted; modification or derivative versions require the copyright holder's prior written permission. See [LICENSE](LICENSE). These restrictions do not apply to users' own configuration, input, output or workflow scripts.
+
+第三方组件仍按其原许可证授权，不适用上述修改限制。移植的 ZCode 保留 Apache-2.0，TypeScript 库保留其原许可；详见 [来源与许可声明](vendor/zcode/PROVENANCE.md)。
+
+Third-party components retain their original licenses and are not subject to the modification restriction above; see the [provenance and license notices](vendor/zcode/PROVENANCE.md).

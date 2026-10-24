@@ -1,3 +1,11 @@
 node_modules/
 *.log
 .DS_Store
+
+# Historical host bundles: only the version named by exports is kept
+dist/workflow-host-*.js
+!dist/workflow-host-0.6.4.js
+
+# Working notes, not part of the plugin
+.impeccable/
+交付.md

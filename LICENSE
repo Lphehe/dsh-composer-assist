@@ -1,21 +1,15 @@
-MIT License
+源码可见、禁止修改许可
 
-Copyright (c) 2026 lphehe-bot
+Copyright (c) 2026 lphehe-bot. 保留所有权利。
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+本许可仅适用于著作权人有权授权的本项目原创程序代码。
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+允许使用未经修改的本软件，并为安装和运行进行必要复制。
+未经著作权人事先书面许可，不得修改本软件、制作衍生版本或分发修改版本。
+除此之外，不授予其他权利。法律另有强制规定的除外。
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+本限制不针对用户自己的配置、输入、输出或工作流脚本。
+第三方组件及其代码仍受各自原许可证约束，不适用本许可中的修改限制。
+
+本软件按“现状”提供，不作任何明示或默示担保，包括适销性、特定用途适用性及不侵权担保。
+在法律允许的最大范围内，著作权人不对因本软件或其使用而产生的任何索赔、损害或其他责任承担责任。
