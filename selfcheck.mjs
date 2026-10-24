@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { __test as check } from './index.js'
 
 let clock = 0
@@ -122,11 +123,15 @@ assert.equal(client.timingBySession.get('a').pending, true, 'old completion cann
 secondRequest.finish('NEW'); await second
 assert.equal(client.suggestionBySession.get('a').text, 'NEW')
 assert(!client.pendingBySession.has('a'))
+// A moved conversation fingerprint must NOT discard a finished answer: it changes for
+// reasons unrelated to the suggestion, which is how every prediction died at 2-7s.
 const lateSource = client.runRequest('next', 'a', 'draft', 'test')
 currentSource = 'cut-2'
-requests.at(-1).finish('LATE SOURCE'); await lateSource
-assert.equal(client.suggestionBySession.get('a').text, 'NEW', 'source must be rechecked before caching')
+requests.at(-1).finish('FINGERPRINT MOVED'); await lateSource
+assert.equal(client.suggestionBySession.get('a').text, 'FINGERPRINT MOVED',
+  'a moved fingerprint must not discard the answer')
 currentSource = 'cut-1'
+client.suggestionBySession.set('a', { kind: 'next', draftAt: 'draft', text: 'NEW', candidates: ['NEW'], source: 'cut-1' })
 const away = client.runRequest('next', 'b', '', 'test')
 requests.at(-1).finish('OWNED BY B'); await away
 assert.equal(client.suggestionBySession.get('a').text, 'NEW')
@@ -159,19 +164,19 @@ assert(!client.pendingBySession.has('a'))
 finishBody({ ok: true, text: 'LATE BODY' })
 await new Promise(resolve => setImmediate(resolve))
 assert.equal(client.suggestionBySession.get('a').text, 'NEW')
-stallSource = true
-const sourceHang = client.runRequest('next', 'a', 'draft', 'timeout')
-requests.at(-1).finish('LATE SOURCE CHECK')
+// The request no longer awaits a conversation-fingerprint round trip, so the old
+// 3000ms source-hang case is gone; the overall deadline still has to fire.
+const deadlineHang = client.runRequest('next', 'a', 'draft', 'deadline')
 await new Promise(resolve => setImmediate(resolve))
-expire(3000); await sourceHang
-assert(!client.pendingBySession.has('a'))
-sourceWaits.shift()({ json: async () => ({ ok: true, source: 'cut-1' }) })
-await new Promise(resolve => setImmediate(resolve))
+expire(3000)
+await deadlineHang
+assert(!client.pendingBySession.has('a'), 'a fired deadline must clear the busy state')
 assert.equal(client.suggestionBySession.get('a').text, 'NEW')
+// sourceMatches still guards an ACCEPT, which is a one-shot user action; it is no
+// longer part of the prediction path.
 const acceptCheck = client.sourceMatches('a', 'cut-1')
 expire(5000)
 await assert.rejects(acceptCheck, { name: 'TimeoutError' })
-sourceWaits.shift()({ json: async () => ({ ok: true, source: 'cut-1' }) })
 stallSource = false
 const timedOld = client.runRequest('next', 'a', 'draft', 'timeout')
 const timedRequest = requests.at(-1)
@@ -202,32 +207,41 @@ assert.equal(newerStats.host, null, 'invalid durations stay unknown')
 assert.equal(client.timingBySession.get('a'), newerStats)
 assert.equal(measuredTiming.status, 'complete', 'a new request has a separate timing record')
 
-// Execute the actual accept callback through its asynchronous source check.
+// Execute the actual accept callback. It writes the draft synchronously, so a Tab press
+// lands even when the conversation moved on; the prechecks below are what stop an
+// unwanted overwrite.
 const acceptStart = clientSource.indexOf('        let accepting = false')
 const acceptEnd = clientSource.indexOf('        acceptRef.current = accept', acceptStart)
 assert(acceptStart >= 0 && acceptEnd > acceptStart)
-for (const change of ['phase', 'session', 'revision', 'unmount', 'none']) {
+for (const change of ['phase', 'session', 'draft', 'stale', 'none']) {
   const writes = []
-  let release
   const record = { kind: 'complete', draftAt: 'prefix', source: 'cut-1' }
   const refs = {
     pending: record, sessionId: 'a', draftRef: { current: 'prefix' }, phaseRef: { current: 'plain' },
     sessionIdRef: { current: 'a' }, acceptRef: { current: undefined },
     suggestionBySession: new Map([['a', record]]), draftBySession: new Map([['a', { revision: 1 }]]),
-    currentCandidate: () => 'suffix', sourceMatches: () => new Promise(resolve => { release = resolve }),
+    currentCandidate: () => 'suffix', pickedText: () => '',
     inputActions: { setDraft: value => writes.push(value) }, recordFeedback: async () => {}, clear: () => {},
     rememberSuggestion: () => {},
   }
+  // Apply the condition BEFORE the call: these are the synchronous guards.
+  if (change === 'phase') refs.phaseRef.current = 'composing'
+  // The stored suggestion belongs to a different session, which is what a switch looks
+  // like from this closure: the map keyed by 'a' no longer holds this record.
+  if (change === 'session') refs.suggestionBySession.clear()
+  if (change === 'draft') refs.draftRef.current = 'edited'
+  if (change === 'stale') refs.suggestionBySession.clear()
   const accept = runInNewContext(`(() => {${clientSource.slice(acceptStart, acceptEnd)}; return accept })()`, refs)
   refs.acceptRef.current = accept
-  assert.equal(accept(), true)
-  if (change === 'phase') refs.phaseRef.current = 'composing'
-  if (change === 'session') refs.sessionIdRef.current = 'b'
-  if (change === 'revision') refs.draftBySession.set('a', { revision: 3 })
-  if (change === 'unmount') refs.acceptRef.current = undefined
-  release(true)
+  const claimed = accept()
   await new Promise(resolve => setImmediate(resolve))
-  assert.deepEqual(writes, change === 'none' ? ['prefixsuffix'] : [], `accept guard: ${change}`)
+  if (change === 'none') {
+    assert.equal(claimed, true, 'a valid accept must claim the key')
+    assert.deepEqual(writes, ['prefixsuffix'], 'accept must write the draft immediately')
+  } else {
+    assert.equal(claimed, false, `accept must refuse: ${change}`)
+    assert.deepEqual(writes, [], `accept must not write: ${change}`)
+  }
 }
 
 // Execute the actual polish callback; intervening edits cannot be overwritten.
@@ -244,7 +258,7 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
     live: { current: { sessionId: 'a', draft: 'original', phase: 'plain' } },
     draftBySession: new Map([['a', { revision: 1 }]]), nextRequestId: () => ++id, currentRequestId: () => id,
     setPolishBusy: () => {}, setPolishFailed: () => {}, sourceMatches: async () => true,
-    request: () => new Promise(resolve => { release = resolve }), inputActions: { setDraft: value => writes.push(value) },
+    runRequest: () => new Promise(resolve => { release = resolve }), inputActions: { setDraft: value => writes.push(value) },
   }
   const run = runInNewContext(`(() => {${clientSource.slice(runStart, runEnd)}; return runPolish })()`, refs)
   const completion = run()
@@ -252,9 +266,235 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
   if (change === 'session') refs.live.current.sessionId = 'b'
   if (change === 'phase') refs.live.current.phase = 'composing'
   if (change === 'unmount') refs.mounted.current = false
-  release({ text: 'polished', source: 'cut-1' })
+  release({ text: 'polished', candidates: ['polished'], source: 'cut-1' })
   await completion
   assert.deepEqual(writes, change === 'none' ? ['polished'] : [], `polish guard: ${change}`)
+  // The polished text must actually reach the draft on the clean path; a missing
+  // write-back is exactly the bug that made the button look inert.
+  if (change === 'none') assert.deepEqual(writes, ['polished'], 'polish must write the result back')
+}
+
+// Space ticks candidates and an accept joins the ticked ones in order.
+{
+  const start = clientSource.indexOf('    function togglePicked(sessionId, index)')
+  assert(start >= 0, 'togglePicked must exist')
+  const end = clientSource.indexOf('    /** The text of the currently shown candidate. */', start)
+  assert(end > start, 'helpers must be delimited')
+  const block = clientSource.slice(start, end)
+  const record = { kind: 'next', draftAt: '', text: 'a', candidates: ['a', 'b', 'c'], source: 's' }
+  const refs = {
+    suggestionBySession: new Map([['s', record]]),
+    candidateIndexBySession: new Map(), pickedBySession: new Map(),
+    publishStore: () => {},
+    candidateTotal: id => refs.suggestionBySession.get(id)?.candidates.length ?? 0,
+  }
+  const api = new Function('refs', `with (refs) { ${block}
+    return { togglePicked, pickedText, pickedBySession } }`)(refs)
+  assert.equal(api.pickedText('s'), '', 'nothing ticked means single select')
+  assert.equal(api.togglePicked('s', 0), true, 'first tick adds')
+  assert.equal(api.togglePicked('s', 2), true, 'second tick adds')
+  assert.equal(api.pickedText('s'), 'a\nc', 'ticks join in candidate order')
+  assert.equal(api.togglePicked('s', 0), false, 'toggling again removes')
+  assert.equal(api.pickedText('s'), 'c')
+  assert.equal(api.togglePicked('s', 2), false)
+  assert.equal(api.pickedBySession.has('s'), false, 'an emptied set must not linger')
+}
+
+// A stale suggestion must not render next to a fresh polish: the list has to be gated
+// on the draft the suggestion was made for.
+{
+  const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
+  assert(src.includes('const current = pending !== null && pending.draftAt === draft'),
+    'the strip must know when a suggestion no longer matches the draft')
+  assert(src.includes('const listed = total > 1 && current'),
+    'the candidate list must be gated on that match')
+}
+
+// Polish must not receive the workspace summary: it lists the branch and changed
+// files, and the model echoed that instead of revising the draft.
+{
+  const host = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
+  assert(host.includes("kind === 'polish' ? '' : context"),
+    'polish must not be given the workspace context')
+  assert(host.includes("polish: `You rewrite the user's draft message"),
+    'polish prompt must ask for a rewrite')
+}
+
+// Polish must rewrite the draft and must not register itself as a suggestion.
+{
+  const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
+  assert(src.includes("if (kind !== 'polish') rememberSuggestion(sessionId, record)"),
+    'polish must stay out of the suggestion store')
+  assert(src.includes("runRequest('polish', sessionId, draft, 'manual')"),
+    'polish must go through the shared request path')
+}
+
+// A turn boundary produced by the plugin's own auxiliary call must be skipped, or each
+// prediction re-arms the next one and the bar never settles.
+{
+  const host = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
+  const start = host.indexOf("scoped.on('agent/turn-stopping'")
+  assert(start >= 0, 'turn boundary listener must exist')
+  const body = host.slice(start, host.indexOf('turn boundaries', start))
+  assert(body.includes('predictingIn.get(sessionId) ?? 0) > 0) return'),
+    'own-call boundaries must be skipped')
+  // The dedupe map is named deliveredTurns in this build; either name must guard the
+  // same rule, so accept both rather than pinning a rename.
+  assert(body.includes('servedTurns.get(sessionId)') || body.includes('deliveredTurns.get(sessionId)'),
+    'served turns must not re-predict')
+}
+
+// The model picker must read a real catalog and stay searchable.
+{
+  const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
+  // The Client has no llm service, so the catalog must come from the Host's own route.
+  assert(src.includes("fetch(`${API}/models`)"), 'the client must read the host catalog route')
+  assert(!src.includes('ctx.remote.llm'), 'the client must not assume a remote.llm service')
+  assert(!src.includes('ctx.remote.session.modelCatalog()'),
+    'the unusable remote.session.modelCatalog call must be gone')
+  assert(src.includes('function ModelPicker('), 'a searchable picker must exist')
+  assert(src.includes('settings.model.search'), 'the picker must offer a search field')
+  const host = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
+  assert(host.includes("path: MODELS_PATH"), 'the host must register the catalog route')
+  assert(host.includes('llm.listProviders()'), 'the host must enumerate providers')
+  assert(host.includes('llm.listModels(provider.id)'), 'the host must enumerate each provider models')
+}
+
+// A picked row must be an inverse fill, not a faint tint: at 22% it was
+// indistinguishable from the default row and the user could not see the selection.
+{
+  const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
+  const start = src.indexOf('const candidateRowPicked = {')
+  assert(start >= 0, 'picked row style must exist')
+  const block = src.slice(start, src.indexOf('}', start) + 1)
+  assert(block.includes("background: 'var(--dsw-alias-brand-primary)'"),
+    'a picked row must use the solid brand fill')
+  assert(!block.includes('color-mix'), 'a picked row must not be a diluted tint')
+  assert(block.includes("color: 'var(--dsw-alias-bg-base)'"),
+    'picked row text must invert per the documented primary-button pairing')
+  assert(src.includes('candidateTextPicked'), 'the inverted text style must be applied')
+}
+
+// An automatic prediction must never replace one already in flight: doing so bumped
+// the request sequence and the answer on the wire came back "expired" seconds later.
+{
+  const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
+  assert(src.includes('const automatic = cause !== \'manual\''),
+    'asks must distinguish automatic from manual')
+  assert(src.includes('if (automatic && pendingBySession.has(owner)) return'),
+    'an automatic ask must not supersede a running one')
+  assert(src.includes("if (via !== 'hide') nextRequestId(sessionId)"),
+    'hiding a suggestion must not invalidate an answer in flight')
+}
+
+// Every component the JSX tree renders must exist. Deleting one while a registration
+// still referenced it threw at render time and took the whole strip down silently.
+{
+  // Slot components are passed to register(); the rest are rendered with h().
+  for (const [name, usage] of [
+    ['AssistButton', 'assist slot'],
+    ['SettingsSection', 'render'],
+    ['SuggestionStrip', 'render'],
+    ['RequestTiming', 'render'],
+  ]) {
+    assert(
+      clientSource.includes(`function ${name}(`) || clientSource.includes(`const ${name} =`),
+      `${name} must be defined`)
+    const used = clientSource.includes(`h(${name},`) || clientSource.includes(`, ${name}))`)
+    assert(used, `${name} (${usage}) must be referenced`)
+  }
+}
+
+// The ▾ menu must open from the measured button rect and survive a missing rect.
+{
+  const start = clientSource.indexOf('      const openMenu = () => {')
+  assert(start >= 0, 'openMenu must exist')
+  const end = clientSource.indexOf('      useEffect(() => {', start)
+  assert(end > start, 'openMenu body must be delimited')
+  const body = clientSource.slice(start, end) + '\nreturn { openMenu }'
+  const runWith = rect => {
+    const state = { open: false, anchor: null }
+    const refs = {
+      open: false, anchor: null,
+      menuAnchor: { current: rect === undefined ? null : { getBoundingClientRect: () => rect } },
+      setOpen: v => { state.open = v },
+      setAnchor: v => { state.anchor = v },
+      window: { innerHeight: 800 },
+    }
+    const out = new Function('refs', `with (refs) { ${body} }`)(refs)
+    out.openMenu()
+    return { open: state.open, anchor: state.anchor }
+  }
+  // A real rect anchors the panel just above the button.
+  const measured = runWith({ left: 120, top: 700 })
+  assert.equal(measured.open, true, 'menu must open')
+  assert.deepEqual(measured.anchor, { left: 120, bottom: 100 }, 'anchor must sit above the button')
+  // No measurable element must still open, not throw.
+  const unmeasured = runWith(undefined)
+  assert.equal(unmeasured.open, true, 'menu must open even without a rect')
+}
+
+// A manual request must reach the Host labelled manual, and must not be superseded
+// by an automatic one: that supersede rule is what made the button look dead.
+{
+  assert(
+    /body: JSON\.stringify\(\{ kind, sessionId, draft, revision, source, cause \}\)/.test(clientSource),
+    'the suggest body must carry cause')
+  assert(
+    /runRequest\('polish', sessionId, draft, 'manual'\)/.test(clientSource),
+    'polish must go through runRequest marked manual')
+
+  // Execute the real staleness rule from index.js against both request kinds.
+  const src = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
+  const start = src.indexOf('        const manual = body.cause === \'manual\'')
+  assert(start >= 0, 'the manual branch must exist in the Host')
+  const end = src.indexOf('        const discard = ', start)
+  assert(end > start, 'the staleness rule must be delimited')
+  const block = src.slice(start, end)
+
+  const runRule = (cause, { superseded = false, moved = false } = {}) => {
+    const ticket = {}
+    const refs = {
+      trace: () => {},
+      kind: 'next',
+      body: { cause }, moved, ticket,
+      latestRequests: { get: () => (superseded ? {} : refs.ticket), set: () => {}, delete: () => {} },
+      inflight: { get: () => undefined },
+      session: {}, source: 'cut-1',
+      sourceOf: () => (refs.moved ? 'cut-2' : 'cut-1'),
+      key: 'k', reply: () => ({}),
+    }
+    const out = new Function('refs', `with (refs) { ${block}\n return { manual, stale: stale() } }`)(refs)
+    return out
+  }
+  assert.equal(runRule('manual').manual, true, 'host must recognise a manual request')
+  assert.equal(runRule('turn-end').manual, false, 'host must not treat automatic as manual')
+  // Manual survives another request arriving; automatic does not.
+  assert.equal(runRule('manual', { superseded: true }).stale, false, 'manual must survive supersede')
+}
+
+// The merged button's primary action follows the draft: empty predicts, text polishes.
+{
+  const start = clientSource.indexOf("      const primary = draft.trim() === '' ? 'predict' : 'polish'")
+  assert(start >= 0, 'primary action selection must exist')
+  const end = clientSource.indexOf('      const runPrimary = ', start)
+  assert(end > start, 'runPrimary must follow the selection')
+  const runLineEnd = clientSource.indexOf('\n', end)
+  const body = clientSource.slice(start, end)
+    + clientSource.slice(end, runLineEnd).replace(/^      /, '') + '\nreturn { primary, runPrimary, calls: refs.calls }'
+  const runFor = draft => {
+    const calls = []
+    const refs = {
+      draft, polishIdle: true, predictBusy: false, polishLabel: 'p', predictLabel: 'q', polishBusy: false,
+      calls, runPolish: () => calls.push('polish'), runPredict: () => calls.push('predict'),
+    }
+    const out = new Function('refs', `with (refs) { ${body} }`)(refs)
+    out.runPrimary()
+    return { primary: out.primary, calls }
+  }
+  assert.deepEqual(runFor(''), { primary: 'predict', calls: ['predict'] }, 'empty draft must predict')
+  assert.deepEqual(runFor('hello'), { primary: 'polish', calls: ['polish'] }, 'non-empty draft must polish')
+  assert.equal(runFor('   ').primary, 'predict', 'whitespace-only draft counts as empty')
 }
 
 // Clearing the composer restores the just-accepted suggestion, and only then.
@@ -355,11 +595,15 @@ process.env.DSH_HOME = `/tmp/composer-selfcheck-no-settings-${process.pid}`
 const until = async predicate => { for (let i = 0; i < 200 && !predicate(); i++) await new Promise(resolve => setTimeout(resolve, 1)); assert(predicate(), 'deferred request reached model') }
 const suggest = revision => routes.get('/api/composer-assist/suggest')(new Request('http://localhost/api/composer-assist/suggest', { method: 'POST', body: JSON.stringify({ sessionId: session.id, kind: 'next', revision }) }))
 try {
+  // A conversation that moved on does NOT invalidate a finished answer: the fingerprint
+  // moves for unrelated reasons and this check is what discarded live predictions.
   const oldSource = suggest(1)
   await until(() => generations.length === 1)
   session.surface.contentGeneration++
-  generations[0]('1. MUST NOT LAND\nCONFIDENCE: 0.9')
-  assert.equal((await (await oldSource).json()).reason, 'stale-source')
+  generations[0]('1. STILL LANDS\nCONFIDENCE: 0.9')
+  const settled = await (await oldSource).json()
+  assert.equal(settled.text, 'STILL LANDS', 'a moved fingerprint must not discard the answer')
+  assert.equal(settled.reason, undefined)
   const older = suggest(2)
   await until(() => generations.length === 2)
   const newer = suggest(3)

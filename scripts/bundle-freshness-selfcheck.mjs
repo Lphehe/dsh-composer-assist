@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const tracked = ['dist/client.js', 'dist/workflow-host.js', 'dist/compiler-worker.js'];
+const tracked = ['dist/client.js', 'dist/compiler-worker.js'];
 const before = new Map(tracked.map(file => [file, readFileSync(join(root, file))]));
 
 // Build into a copy so a mismatch cannot overwrite the committed artifact here.

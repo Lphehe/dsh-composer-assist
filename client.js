@@ -24,6 +24,9 @@ window.__ModuleLoader__.load({
       'strip.dismiss': '忽略',
       'strip.draftChanged': '草稿已变化，请重新预测',
       'strip.confidence': '置信度',
+      'strip.picked': '已选',
+      'strip.candidates': '候选建议',
+      'strip.rowLabel': '第 {n} 条，共 {total} 条',
       'strip.confidenceHigh': '较高',
       'strip.confidenceMedium': '中等',
       'strip.confidenceLow': '较低',
@@ -37,7 +40,12 @@ window.__ModuleLoader__.load({
       'polish.title': '润色提示词',
       'polish.busy': '润色中…',
       'polish.failed': '润色失败',
+      'assist.title': '润色或预测输入框',
+      'assist.more': '更多操作与设置',
       'settings.title': '输入框预测',
+      'settings.nav': '预测',
+      'settings.restore': '恢复默认值',
+      'settings.restoreHint': '把这几个数值改回插件默认值，不动开关和模型选择。',
       'settings.description': '在输入框上方预测你想输入的内容、补全草稿，或点 ✨ 润色提示词。',
       'settings.enabled': '启用',
       'settings.learn': '接受学习',
@@ -59,13 +67,23 @@ window.__ModuleLoader__.load({
       'settings.enabledHint': '关闭后行为与未安装时完全一致。',
       'settings.modeHint': '自动 = 每轮回答后预测一次；单词 = 输入时补全后半句。',
       'settings.modelHint': '留空则跟随本会话上次真实用过的模型。',
-      'settings.maxOutputTokens': '输出上限（token）',
+      'settings.model.search': '搜索模型或供应商',
+      'settings.model.noMatch': '没有匹配的模型',
+      'settings.model.loading': '正在读取模型列表…',
+      'settings.model.routeMissing': '无法读取模型列表：宿主接口未就绪，请重启 DSH 后重试',
+      'settings.model.badResponse': '宿主返回了无法识别的模型列表',
+      'settings.group.behavior': '行为',
+      'settings.group.budget': '限制与开销',
+      'settings.summary.on': '已启用',
+      'settings.group.learning': '学习',
+      'settings.summary.off': '已关闭',
+      'settings.maxOutputTokens': '输出上限',
       'settings.maxOutputTokensHint': '推理型模型先花推理预算，太小会导致返回空建议。',
-      'settings.debounceMs': '输入停顿（毫秒）',
+      'settings.debounceMs': '输入停顿',
       'settings.debounceMsHint': '单词补全等你停手这么久才发请求。',
-      'settings.timeoutMs': '超时（毫秒）',
-      'settings.timeoutMsHint': '超时后静默丢弃，不打扰输入。',
-      'settings.maxInputChars': '上下文上限（字符）',
+      'settings.timeoutMs': '超时',
+      'settings.timeoutMsHint': '超时后静默丢弃，不打扰输入。单次模型调用的上限。',
+      'settings.maxInputChars': '上下文上限',
       'settings.maxInputCharsHint': '发给预测模型的最近对话长度。',
       'settings.minConfidence': '置信度门槛',
       'settings.minConfidenceHint': '低于此值的预测会被丢弃；0 表示全部保留，只在建议栏标注置信度。',
@@ -73,6 +91,9 @@ window.__ModuleLoader__.load({
       'settings.saveFailed': '设置保存失败',
       'settings.noModels': '当前没有可用模型，请先在「模型」设置里配置。',
       'settings.catalogFailed': '读取模型目录失败：',
+      'settings.open': '输入框预测设置',
+      'settings.close': '关闭',
+      'settings.subagentNote': '子智能体可用的模型由 DSH 原生「子智能体模型选择设置」管理，不在本插件里改。',
     }
     const en = {
       'strip.next': 'Predicted input',
@@ -84,6 +105,9 @@ window.__ModuleLoader__.load({
       'strip.dismiss': 'Dismiss',
       'strip.draftChanged': 'Draft changed; predict again',
       'strip.confidence': 'confidence',
+      'strip.picked': 'ticked',
+      'strip.candidates': 'Candidate suggestions',
+      'strip.rowLabel': 'Candidate {n} of {total}',
       'strip.confidenceHigh': 'high',
       'strip.confidenceMedium': 'medium',
       'strip.confidenceLow': 'low',
@@ -97,7 +121,12 @@ window.__ModuleLoader__.load({
       'polish.title': 'Polish prompt',
       'polish.busy': 'Polishing…',
       'polish.failed': 'Polish failed',
+      'assist.title': 'Polish or predict the composer',
+      'assist.more': 'More actions and settings',
       'settings.title': 'Composer prediction',
+      'settings.nav': 'Prediction',
+      'settings.restore': 'Restore defaults',
+      'settings.restoreHint': 'Resets these numbers to the plugin defaults; leaves switches and model choice alone.',
       'settings.description': 'Predict what you are about to type, complete a draft, or polish it with ✨.',
       'settings.enabled': 'Enabled',
       'settings.learn': 'Acceptance learning',
@@ -119,13 +148,23 @@ window.__ModuleLoader__.load({
       'settings.enabledHint': 'Off behaves exactly like the plugin not being installed.',
       'settings.modeHint': 'Auto = once after each reply; Word = continue the draft while typing.',
       'settings.modelHint': 'Empty follows the model this session actually used last.',
-      'settings.maxOutputTokens': 'Output cap (tokens)',
+      'settings.model.search': 'Search models or providers',
+      'settings.model.noMatch': 'No matching model',
+      'settings.model.loading': 'Loading models…',
+      'settings.model.routeMissing': 'Cannot read models: the Host route is not ready; restart DSH and retry',
+      'settings.model.badResponse': 'The Host returned an unreadable model list',
+      'settings.group.behavior': 'Behaviour',
+      'settings.group.budget': 'Limits and cost',
+      'settings.summary.on': 'On',
+      'settings.group.learning': 'Learning',
+      'settings.summary.off': 'Off',
+      'settings.maxOutputTokens': 'Output cap',
       'settings.maxOutputTokensHint': 'Reasoning models spend budget on reasoning first; a small cap yields an empty suggestion.',
-      'settings.debounceMs': 'Typing pause (ms)',
+      'settings.debounceMs': 'Typing pause',
       'settings.debounceMsHint': 'How long the draft must stay still before completion is requested.',
-      'settings.timeoutMs': 'Timeout (ms)',
+      'settings.timeoutMs': 'Timeout',
       'settings.timeoutMsHint': 'A timeout drops the request silently and never blocks typing.',
-      'settings.maxInputChars': 'Context cap (characters)',
+      'settings.maxInputChars': 'Context cap',
       'settings.maxInputCharsHint': 'How much recent conversation is sent to the prediction model.',
       'settings.minConfidence': 'Confidence bar',
       'settings.minConfidenceHint': 'Predictions below this are dropped; 0 keeps them and only shows the confidence badge.',
@@ -133,6 +172,9 @@ window.__ModuleLoader__.load({
       'settings.saveFailed': 'Could not save settings',
       'settings.noModels': 'No models are available; configure one under Models first.',
       'settings.catalogFailed': 'Could not read the model catalog: ',
+      'settings.open': 'Composer prediction settings',
+      'settings.close': 'Close',
+      'settings.subagentNote': 'Which models subagents may use is owned by the native "Subagent model selection" setting, not by this plugin.',
     }
 
     Object.assign(zh, {
@@ -169,9 +211,13 @@ window.__ModuleLoader__.load({
     async function readSettings() {
       try {
         const response = await fetch(`${API}/settings`)
-        const body = await response.json()
-        if (body?.settings === undefined) throw new Error('settings response carried no settings')
+        const body = await readJsonResponse(response, 'settings')
+        if (body.ok !== true) throw new ResponseShapeError('settings: request was refused')
+        if (body.settings === null || typeof body.settings !== 'object' || Array.isArray(body.settings)) {
+          throw new ResponseShapeError('settings: "settings" is not an object')
+        }
         settingsStore.error = undefined
+        if (body.defaults !== undefined) settingsStore.defaults = body.defaults
         settingsStore.set(body.settings)
         return body.settings
       } catch (failure) {
@@ -211,8 +257,50 @@ window.__ModuleLoader__.load({
     }
 
     const timingBySession = new Map()
+    /**
+     * Response shapes are checked field by field. Treating "the body is an object" as
+     * enough is what turned a missing route, a moved revision and a real answer into the
+     * same "expired" label; a shape mismatch has to say which field was wrong.
+     */
+    class ResponseShapeError extends Error {}
 
-    async function request(kind, sessionId, draft, revision, source) {
+    async function readJsonResponse(response, what) {
+      // Read the raw text so a non-JSON body (an unregistered route answers with plain
+      // text) reports the real cause instead of a JSON syntax error. A Response without
+      // text() — a test double, or an adapter that pre-parsed — falls back to json().
+      const raw = typeof response.text === 'function' ? await response.text() : JSON.stringify(await response.json())
+      let body
+      try {
+        body = JSON.parse(raw)
+      } catch {
+        // A route that is not registered answers with plain text, so say that rather
+        // than reporting a JSON syntax error the user cannot act on.
+        throw new ResponseShapeError(response.ok
+          ? `${what}: response is not JSON`
+          : `${what}: HTTP ${response.status}${raw === '' ? '' : ` (${raw.slice(0, 80)})`}`)
+      }
+      if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+        throw new ResponseShapeError(`${what}: response is not an object`)
+      }
+      return body
+    }
+
+    const isPositiveInt = value => Number.isSafeInteger(value) && value >= 0
+
+    function requireString(body, key, what) {
+      if (typeof body[key] !== 'string') throw new ResponseShapeError(`${what}: "${key}" is not a string`)
+      return body[key]
+    }
+
+    function requireFinite(body, key, what) {
+      if (!Number.isFinite(body[key]) || body[key] < 0) {
+        throw new ResponseShapeError(`${what}: "${key}" is not a non-negative number`)
+      }
+      return body[key]
+    }
+
+
+    async function request(kind, sessionId, draft, revision, source, cause) {
       const configured = settingsStore.value?.timeoutMs
       const deadline = Number.isFinite(configured) ? Math.max(2000, Math.min(120000, configured)) : 20000
       const id = currentRequestId(sessionId)
@@ -226,31 +314,56 @@ window.__ModuleLoader__.load({
           const response = await fetch(`${API}/suggest`, {
             method: 'POST',
             headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ kind, sessionId, draft, revision, source }),
+            body: JSON.stringify({ kind, sessionId, draft, revision, source, cause }),
             signal,
           })
           signal.throwIfAborted()
           timing.stage = 'validate'
           timing.receivedAt = performance.now()
           if (timingBySession.get(sessionId) === timing) notifyStore()
-          const body = await response.json()
+          const body = await readJsonResponse(response, `suggest(${kind})`)
           signal.throwIfAborted()
-          const owned = body?.sessionId === sessionId && body.revision === revision && typeof body.source === 'string'
+          // `ok` decides the branch; everything else is validated only where it is used,
+          // so an optional field being absent is not an error but a wrong type is.
+          if (typeof body.ok !== 'boolean') throw new ResponseShapeError('suggest: "ok" is not a boolean')
+          if (body.ok !== true) {
+            if (typeof body.error !== 'string' || body.error === '') {
+              throw new ResponseShapeError('suggest: failure without an error message')
+            }
+            throw new Error(body.error)
+          }
+          const owned = body.sessionId === sessionId
+            && body.revision === revision
+            && typeof body.source === 'string'
           const phases = ['queue', 'prepare', 'model', 'validate']
           if (owned && phases.includes(body.timing?.phase)
             && phases.every(key => Number.isFinite(body.timing[key]) && body.timing[key] >= 0)) {
             timing.host = { phase: body.timing.phase, ...Object.fromEntries(phases.map(key => [key, body.timing[key]])) }
           }
-          if (body?.ok !== true) throw new Error(body?.error ?? 'failed')
-          if (!owned) return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
+          if (!owned) {
+            // Say why this looked unowned instead of collapsing every cause into
+            // "expired": a wrong revision, a missing source and a moved fingerprint are
+            // different bugs.
+            reportProbe({
+              phase: 'not-owned', reason: 'not-owned',
+              sameSession: body?.sessionId === sessionId,
+              revisionMatches: body?.revision === revision,
+              hasSource: typeof body?.source === 'string',
+              source: body?.source, sourceBound: body?.sourceBound,
+              sourceBefore: body?.sourceBefore, sourceAfter: body?.sourceAfter,
+              hostReason: body?.reason,
+            })
+            return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
+          }
           const text = typeof body.text === 'string' ? body.text : ''
           if (text === '' && body.reason !== undefined) {
             reportProbe({ phase: 'empty-result', reason: body.reason, transcriptChars: body.transcriptChars })
             return { text: '', candidates: [], confidence: null, reason: body.reason }
           }
-          if (text !== '' && !await sourceMatches(sessionId, body.source)) {
-            return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
-          }
+          // No second fingerprint veto here. The Host already refused superseded
+          // requests, and the caller re-checks the draft revision before writing. Asking
+          // the conversation to be byte-identical after a multi-second model call threw
+          // away finished answers instead of protecting anything.
           signal.throwIfAborted()
           const candidates = Array.isArray(body.candidates)
             ? body.candidates.filter(item => typeof item === 'string' && item.trim() !== '').slice(0, 3)
@@ -484,24 +597,38 @@ window.__ModuleLoader__.load({
     /** A prediction request in flight, owned by the module (not a component). */
     function runRequest(kind, sessionId, draft, cause, source) {
       if (kind === 'complete' && hasDraftRequest(sessionId, draft)) return Promise.resolve(null)
+      // Polish shares the session's request sequence so a prediction poll cannot mark a
+      // finished polish stale merely by bumping the counter first.
       const id = nextRequestId(sessionId)
       const revision = trackDraft(sessionId, draft).revision
-      pendingBySession.set(sessionId, { id, draft, revision, bounded: true })
+      const token = {}
+      pendingBySession.set(sessionId, { id, token, draft, revision, bounded: true })
       publishStore()
       reportProbe({ phase: 'begin', trace: `req-${id}`, owner: sessionId, kind, cause })
-      return request(kind, sessionId, draft, revision, source).then((result) => {
-        const stale = id !== currentRequestId(sessionId) || draftBySession.get(sessionId)?.revision !== revision
+      return request(kind, sessionId, draft, revision, source, cause).then((result) => {
+        // A newer request for the same session supersedes this one, and an edited draft
+        // invalidates it; either way the result must not be cached.
+        const idMoved = id !== currentRequestId(sessionId)
+        const draftMoved = draftBySession.get(sessionId)?.revision !== revision
+        const stale = idMoved || draftMoved
+        // Split the two causes: a superseded request is scheduling, an edited draft is
+        // the user moving on. Collapsing them made this impossible to diagnose.
         reportProbe({ phase: 'result', trace: `req-${id}`, kind,
-          textLength: result.text.length, stale, owner: sessionId, confidence: result.confidence })
+          textLength: result.text.length, stale, idMoved, draftMoved, owner: sessionId,
+          confidence: result.confidence })
         if (stale || result.text === '') return null
         const record = {
           kind, text: result.text, draftAt: draft, source: result.source,
           candidates: result.candidates, confidence: result.confidence,
         }
-        rememberSuggestion(sessionId, record)
+        // Polish rewrites the draft; it is not a suggestion to show above it. Storing
+        // it made the bar surface the polished text as if it were a new prediction.
+        if (kind !== 'polish') rememberSuggestion(sessionId, record)
         return record
       }).catch(() => null).finally(() => {
-        if (pendingBySession.get(sessionId)?.id === id) pendingBySession.delete(sessionId)
+        // Compare by the request identity this call owns, not by a numeric id a caller
+        // may have pre-claimed: an unmatched id left the session permanently busy.
+        if (pendingBySession.get(sessionId)?.token === token) pendingBySession.delete(sessionId)
         publishStore()
       })
     }
@@ -561,7 +688,7 @@ window.__ModuleLoader__.load({
     async function sourceMatches(sessionId, source) {
       return withTimeout(async (signal) => {
         const response = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`, { signal })
-        const body = await response.json()
+        const body = await readJsonResponse(response, 'turn')
         signal.throwIfAborted()
         return body.ok === true && typeof source === 'string' && body.source === source
       }, 5000)
@@ -635,6 +762,9 @@ window.__ModuleLoader__.load({
       if (value === null) {
         suggestionBySession.delete(sessionId)
         candidateIndexBySession.delete(sessionId)
+        // Ticks belong to one suggestion; keeping them would join candidates the user
+        // never ticked in a later prediction.
+        pickedBySession.delete(sessionId)
       } else {
         suggestionBySession.delete(sessionId)
         suggestionBySession.set(sessionId, value)
@@ -644,6 +774,14 @@ window.__ModuleLoader__.load({
       while (suggestionBySession.size > 8) suggestionBySession.delete(suggestionBySession.keys().next().value)
       publishStore()
     }
+
+    /**
+     * The suggestion the user just accepted, kept so clearing the composer brings
+     * it back. Accepting used to forget it outright, which made an accepted
+     * prediction unrecoverable after the draft was cleared. Kept per session and
+     * never persisted: it is a one-step undo, not a second suggestion store.
+     */
+    const acceptedBySession = new Map()
 
     /** The currently shown candidate index for one session. */
     function candidateIndex(sessionId) {
@@ -657,6 +795,40 @@ window.__ModuleLoader__.load({
       return Array.isArray(record.candidates) && record.candidates.length > 0
         ? record.candidates.length
         : 1
+    }
+
+    /**
+     * Candidates the user ticked with Space, per session. Empty means "not choosing
+     * several": accepting then takes just the shown candidate, so the single-select
+     * path is unchanged for everyone who never presses Space.
+     */
+    const pickedBySession = new Map()
+
+    /** Toggle one candidate in the ticked set; returns its new state. */
+    function togglePicked(sessionId, index) {
+      const total = candidateTotal(sessionId)
+      if (total <= 1) return false
+      const set = pickedBySession.get(sessionId) ?? new Set()
+      if (set.has(index)) set.delete(index)
+      else set.add(index)
+      // An emptied set must not linger, or accepting would keep looking multi-select.
+      if (set.size === 0) pickedBySession.delete(sessionId)
+      else pickedBySession.set(sessionId, set)
+      publishStore()
+      return set.has(index)
+    }
+
+    /** Stable, top-to-bottom order for an accepted multi-selection. */
+    function pickedText(sessionId) {
+      const set = pickedBySession.get(sessionId)
+      if (set === undefined || set.size === 0) return ''
+      const record = suggestionBySession.get(sessionId)
+      if (record === null || record === undefined) return ''
+      const list = Array.isArray(record.candidates) && record.candidates.length > 0
+        ? record.candidates : [record.text]
+      return [...set].sort((a, b) => a - b)
+        .map(index => String(list[index] ?? '')).filter(text => text !== '')
+        .join('\n')
     }
 
     /** The text of the currently shown candidate. */
@@ -687,30 +859,35 @@ window.__ModuleLoader__.load({
     /** Accept handle published by the mounted strip for the keyboard listener. */
     const acceptRef = { current: undefined }
 
+    // Suggestion bar. Depth comes from a host surface layer plus a one-pixel
+    // boundary — DESIGN.md defines no shadow token, and the old 4px left accent read
+    // as decoration rather than state.
     const stripStyle = {
       display: 'flex', alignItems: 'flex-start', gap: '10px',
-      // Align with the composer card: same cap and the same side clearances the
-      // host uses for its own dock cards, centred in the stack.
-      // Measured against the live card: this slot is a sibling of the input bar, and
-      // the bar's own wrapper carries `padding: 0 <side-clearance>`. Without the same
-      // inset here the bar is exactly one clearance too wide on each side
-      // (observed delta: -16 / +16). Pull both sides in by that clearance.
+      // Align with the composer card: same cap and side clearances the host uses for
+      // its own dock cards, centred in the stack. This slot is a sibling of the input
+      // bar, whose wrapper carries `padding: 0 <side-clearance>`; without the same
+      // inset the bar is one clearance too wide on each side.
       boxSizing: 'border-box',
       width: 'calc(100% - 2 * var(--dsh-composer-side-clearance, 16px))',
       maxWidth: 'var(--dsh-composer-card-max-width)',
-      margin: '0 auto 8px', padding: '10px 12px 10px 14px', borderRadius: '12px',
-      // Brand-tinted so the card reads as "the assistant spoke" at a glance.
-      border: '1px solid var(--dsw-alias-brand-primary)',
-      borderLeft: '4px solid var(--dsw-alias-brand-primary)',
-      background: 'var(--dsw-alias-bg-layer-1)',
-      boxShadow: '0 2px 10px rgba(0, 0, 0, 0.06)',
+      margin: '0 auto 8px', padding: '10px 12px', borderRadius: '12px',
+      border: '1px solid var(--dsw-alias-border-l1)',
+      // A faint brand wash plus the card layer: distinct from the composer below
+      // without the heavy accent bar the design brief rejected.
+      background: 'color-mix(in srgb, var(--dsw-alias-brand-primary) 3%, var(--dsw-alias-bg-layer-1))',
       color: 'var(--dsw-alias-label-primary)',
-      fontSize: '13px', lineHeight: '1.55',
+      fontSize: '13px', lineHeight: '1.5',
     }
+    // The badge is a label, not a control: 11px on the documented label step.
+    // Pills, not bare labels: the header has to say which feature spoke and what state
+    // it is in, and flat grey text disappeared against the card surface.
+    // Restraint: the header states what spoke and how sure it is in plain type. Three
+    // boxed pills competed with the rows below, which are the thing the user acts on.
+    // The one bold element in this bar is the picked-row highlight.
     const stripBadge = {
-      flex: '0 0 auto', fontSize: '11px', fontWeight: '600',
-      color: 'var(--dsw-alias-brand-primary)', letterSpacing: '0.02em',
-      paddingTop: '1px', whiteSpace: 'nowrap',
+      flex: '0 0 auto', fontSize: '11px', fontWeight: '650', lineHeight: '1.6',
+      color: 'var(--dsw-alias-brand-primary)', whiteSpace: 'nowrap',
     }
     const stripText = {
       flex: '1 1 auto', minWidth: 0, color: 'var(--dsw-alias-label-primary)',
@@ -718,6 +895,48 @@ window.__ModuleLoader__.load({
     }
     const stripActions = { flex: '0 0 auto', display: 'flex', alignItems: 'center', gap: '6px' }
 
+    // 5px chip corners and the token selection tint; a ticked row is highlighted as a
+    // whole so the choice does not depend on reading a glyph.
+    // Rows are the primary control of this bar, so they carry the layer-2 surface a
+    // button would: an untinted row still reads as clickable rather than as plain text.
+    const candidateRow = {
+      display: 'flex', alignItems: 'flex-start', gap: '10px',
+      boxSizing: 'border-box', padding: '8px 12px', marginTop: '6px',
+      borderRadius: '8px', cursor: 'pointer',
+      border: '1px solid var(--dsw-alias-border-l1)',
+      background: 'var(--dsw-alias-bg-layer-2)',
+      color: 'var(--dsw-alias-label-primary)',
+      textAlign: 'left',
+    }
+    // Three states, deliberately far apart in contrast so a row's status needs no
+    // hunting:
+    //   default  — layer-2 surface, hairline boundary
+    //   shown    — the arrows point here: a 2px brand ring on the card surface
+    //   picked   — solid brand fill with inverted text, the one bold element of this bar
+    const candidateRowShown = {
+      ...candidateRow,
+      border: '2px solid var(--dsw-alias-brand-primary)',
+      padding: '7px 11px',
+      background: 'var(--dsw-alias-bg-layer-1)',
+    }
+    const candidateRowPicked = {
+      ...candidateRow,
+      border: '1px solid var(--dsw-alias-brand-primary)',
+      background: 'var(--dsw-alias-brand-primary)',
+      color: 'var(--dsw-alias-bg-base)',
+    }
+    // Inverted text on the filled row; the label step stays the same.
+    const candidateTextPicked = {
+      flex: '1 1 auto', minWidth: 0,
+      color: 'var(--dsw-alias-bg-base)',
+      whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+    }
+    // A plain numeral, not a second badge inside a row that is already a control.
+    const candidateIndexLabel = {
+      flex: '0 0 auto', width: '14px', textAlign: 'right',
+      fontSize: '10px', fontWeight: '650', lineHeight: '1.6',
+      color: 'var(--dsw-alias-label-secondary)',
+    }
     /** One suggestion strip: renders nothing when there is nothing to offer. */
     function SuggestionStrip({ sessionId, useInput, useSession, inputActions, settings, t }) {
       const draft = useInput(state => state.draft)
@@ -800,7 +1019,10 @@ window.__ModuleLoader__.load({
       const clear = (via) => {
         reportProbe({ phase: 'clear', via: via ?? 'unknown', instanceId: instanceId.current,
           sessionId, hadPending: pending !== null })
-        nextRequestId(sessionId)
+        // Advance the sequence only when the user actually dismisses or accepts, so a
+        // request still in flight stops counting as wanted. A 'hide' (Escape) leaves the
+        // suggestion intact, and bumping there threw away an answer about to arrive.
+        if (via !== 'hide') nextRequestId(sessionId)
         if (via !== 'hide') rememberSuggestion(sessionId, null)
         setPending(null); setBusy(false); setFailed(false)
         for (const listener of listeners) listener()
@@ -808,6 +1030,12 @@ window.__ModuleLoader__.load({
 
       const ask = async (kind, at, cause, source) => {
         const owner = sessionId
+        // Automatic asks (a finished turn, a typing debounce) must not replace a request
+        // that is already running: the replacement bumps the sequence and the answer in
+        // flight is discarded as expired. A manual click is an explicit request for a
+        // fresh answer, so it keeps the right to supersede.
+        const automatic = cause !== 'manual'
+        if (automatic && pendingBySession.has(owner)) return
         reportProbe({ phase: 'request', kind, cause: cause ?? 'unknown', draft: at, owner })
         setFailed(false)
         await runRequest(kind, owner, at, cause, source)
@@ -836,8 +1064,8 @@ window.__ModuleLoader__.load({
             // boundary if a session switch lands in between (the old code lost the
             // turn exactly that way, leaving nothing to show on return).
             const peek = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`)
-            const seen = await peek.json()
-            if (stopped || seen?.turn === null || seen?.turn === undefined) return
+            const seen = await readJsonResponse(peek, 'turn')
+            if (stopped || seen.turn === null || seen.turn === undefined) return
             // A draft in progress means the user is already writing; leave the
             // boundary UNCONSUMED so it can still serve them after they clear it.
             // (The old code consumed it here, which is why a finished turn could
@@ -845,14 +1073,20 @@ window.__ModuleLoader__.load({
             if (draftRef.current !== '') return
             // Claim, then ask. Only a successful claim may drop the suggestion.
             const claim = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`)
-            const claimed = await claim.json()
-            if (claimed?.turn === null || claimed?.turn === undefined) return
+            const claimed = await readJsonResponse(claim, 'turn')
+            if (claimed.turn === null || claimed.turn === undefined) return
             if (blank || draftRef.current !== '') return
+            // A turn already being answered is not a reason to abandon it.
+            if (pendingBySession.has(sessionId)) return
             void ask('next', '', 'turn-end', claimed.source)
           } catch { /* a missed poll just means no prediction for that turn */ }
         }
         void poll()
         const timers = []
+        // Never start a second prediction for the same session while one is running:
+        // the new request bumps the sequence, so the answer already in flight came back
+        // "expired" a second or two later. That is what made predictions look unreliable.
+        // (The guard lives in poll below.)
         if (running) {
           // Dense while the agent works: the boundary can land at any step end.
           timers.push(setInterval(() => { void poll() }, 1000))
@@ -884,9 +1118,17 @@ window.__ModuleLoader__.load({
       pendingRef.current = pending
       manualRequest.current = (kind) => {
         reportProbe({ phase: 'manual-fire', kind: kind ?? 'next', hasAsk: askRef.current !== undefined, enabled })
+        // `ask` is async, so a caller that polls for busy state immediately after this
+        // call could still see "idle" and fire again. Record the claim synchronously.
+        pendingBySession.set(sessionId, { id: currentRequestId(sessionId) + 1, token: {}, bounded: true })
+        publishStore()
         void askRef.current?.(kind ?? 'next', draftRef.current, 'manual')
       }
       manualRequest.hasSuggestion = () => pendingRef.current !== null
+      // True while a request for this session is genuinely in flight. The button used a
+      // fixed 3s timeout, which re-enabled it long before a 20s model call finished; the
+      // next click then superseded the answer that was about to land.
+      manualRequest.isBusy = () => pendingBySession.has(sessionId)
       manualRequest.subscribe = (listener) => {
         listeners.add(listener)
         return () => { listeners.delete(listener) }
@@ -916,19 +1158,25 @@ window.__ModuleLoader__.load({
           if (pending === null || stored === undefined || stored.draftAt !== draftRef.current
             || phaseRef.current !== 'plain' || accepting) return false
           const revision = draftBySession.get(sessionId)?.revision
-          const text = currentCandidate(sessionId)
+          // A ticked selection wins: the user explicitly chose several candidates.
+          const picked = pickedText(sessionId)
+          const text = picked !== '' ? picked : currentCandidate(sessionId)
           accepting = true
+          // Write the draft immediately. This used to await a network round trip that
+          // compared the conversation's content generation first, so any change in
+          // between — including the message the prediction followed — discarded the
+          // accept silently and Tab looked dead. The synchronous prechecks above are
+          // what actually protect the draft; the remote check was only a second opinion.
+          inputActions.setDraft(stored.kind === 'complete' ? `${stored.draftAt}${text}` : text)
           void (async () => {
             try {
-              if (!await sourceMatches(sessionId, stored.source)) {
-                if (suggestionBySession.get(sessionId) === stored) rememberSuggestion(sessionId, null)
-                return
-              }
-              if (acceptRef.current !== accept || sessionIdRef.current !== sessionId || suggestionBySession.get(sessionId) !== stored
-                || draftBySession.get(sessionId)?.revision !== revision || draftRef.current !== stored.draftAt
-                || phaseRef.current !== 'plain') return
-              inputActions.setDraft(stored.kind === 'complete' ? `${stored.draftAt}${text}` : text)
               void recordFeedback('accept', text)
+              // Keep the accepted suggestion so clearing the draft restores it.
+              // `next`-kind carries draftAt === '', so it is directly reusable;
+              // a completion is anchored to the draft it continued and is dropped
+              // once that draft is gone.
+              if (stored.kind === 'next') acceptedBySession.set(sessionId, stored)
+              else acceptedBySession.delete(sessionId)
               clear('accept')
             } catch { /* Never overwrite a draft when its source cannot be verified. */ }
             finally { accepting = false }
@@ -957,8 +1205,22 @@ window.__ModuleLoader__.load({
           // Arrow keys cycle through the candidate list; Tab then accepts the pick.
           // Only on an empty draft: with text in the composer the caret has somewhere
           // to go, and stealing the arrow would break normal editing.
-          if ((event.key === 'ArrowRight' || event.key === 'ArrowLeft') && draftRef.current === '') {
-            if (cycleCandidate(sessionId, event.key === 'ArrowRight' ? 1 : -1)) {
+          // A vertical list: Down/Right advance, Up/Left go back. Only on an empty
+          // draft, where the arrows have no caret to move.
+          if (draftRef.current === '') {
+            const step = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1
+              : event.key === 'ArrowUp' || event.key === 'ArrowLeft' ? -1 : 0
+            if (step !== 0 && cycleCandidate(sessionId, step)) {
+              event.preventDefault()
+              return
+            }
+          }
+          // Space ticks the shown candidate. Only with an empty draft and several
+          // candidates: text in the composer means Space is a space, and with one
+          // candidate there is nothing to choose between.
+          if (event.key === ' ') {
+            if (draftRef.current === '' && candidateTotal(sessionId) > 1) {
+              togglePicked(sessionId, candidateIndex(sessionId))
               event.preventDefault()
               return
             }
@@ -969,6 +1231,23 @@ window.__ModuleLoader__.load({
         window.addEventListener('keydown', onKey)
         return () => { window.removeEventListener('keydown', onKey) }
       }, [pending])
+
+      // Clearing the composer brings back the suggestion that was just accepted.
+      // Deliberately narrow: only when the draft becomes empty, nothing newer is
+      // stored, and no request is in flight — otherwise this would fight the
+      // prediction the user asked for.
+      useEffect(() => {
+        if (!enabled || draft !== '') return
+        if (suggestionBySession.get(sessionId) !== undefined || pendingBySession.has(sessionId)) return
+        const saved = acceptedBySession.get(sessionId)
+        if (saved === undefined) return
+        // Delete before publishing: rememberSuggestion notifies every listener, and a
+        // re-render that still saw the record would restore it again in a loop and
+        // take the strip down with it.
+        acceptedBySession.delete(sessionId)
+        rememberSuggestion(sessionId, saved)
+        setPending(saved)
+      }, [enabled, draft, sessionId])
 
       const inline = settings?.display === 'inline'
       const continuation = pending?.kind === 'complete' && pending.draftAt === draft && draft !== ''
@@ -1009,10 +1288,19 @@ window.__ModuleLoader__.load({
       const stored = pending !== null ? suggestionBySession.get(sessionId) : null
       const text = currentCandidate(sessionId)
       const total = candidateTotal(sessionId)
+      // The list the rows are built from, and the ticked set for this session. A
+      // suggestion without a candidate array is normalised to one entry so the row
+      // builder never has to special-case it.
+      const candidateList = Array.isArray(stored?.candidates) && stored.candidates.length > 0
+        ? stored.candidates : stored === null ? [] : [stored.text]
+      const pickedForSession = pickedBySession.get(sessionId)
       const confidence = stored?.confidence
       // Built here rather than via locale interpolation: the locale helper's
       // placeholder behaviour is not verified, and numbers need no translation.
-      const counter = total > 1 ? `${candidateIndex(sessionId) + 1}/${total}` : ''
+      const pickedCount = pickedForSession === undefined ? 0 : pickedForSession.size
+      const counter = total > 1
+        ? `${candidateIndex(sessionId) + 1}/${total}${pickedCount > 0 ? ` · ${pickedCount} ${t('strip.picked')}` : ''}`
+        : ''
       // The model's number is its own rough guess, so it is labelled as such and
       // rounded to a coarse band: a made-up 73% would read as a real probability.
       const confidenceText = typeof confidence === 'number'
@@ -1022,121 +1310,111 @@ window.__ModuleLoader__.load({
 
       // Standalone suggestion bar above the composer. Its own element and its own
       // line, so it can never collide with the composer placeholder.
-      return h('div', { style: inline ? {
-        ...stripStyle, padding: '2px 4px', marginBottom: '4px',
-        border: 'none', borderLeft: 'none', borderRadius: 0,
-        background: 'transparent', boxShadow: 'none',
-      } : stripStyle, role: 'status', 'aria-live': 'polite', 'data-composer-assist-bar': '' },
-        h('span', { style: stripBadge }, inline && ghost !== '' ? t('strip.preview') : badge),
-        confidenceText !== null && h('span', {
-          style: {
-            flex: '0 0 auto', fontSize: '10px', fontWeight: '600',
-            color: confidence >= 0.7 ? 'var(--dsw-alias-label-secondary)' : 'var(--dsw-alias-label-tertiary)',
-            paddingTop: '2px', whiteSpace: 'nowrap',
+      // With several candidates the bar becomes a column: a header row for status and
+      // actions, then a full-width list. The old single row put the list between the
+      // badge and the buttons, which squeezed every row and centred its text.
+      // A suggestion belongs to the draft it was produced for. Once the draft moves on,
+      // the whole list is stale: rendering it next to a finished polish showed two
+      // unrelated states at once. The bar keeps only the timing row in that case.
+      const current = pending !== null && pending.draftAt === draft
+      const listed = total > 1 && current
+      const rootStyle = inline
+        ? { ...stripStyle, padding: '2px 4px', marginBottom: '4px', border: 'none', borderRadius: 0, background: 'transparent' }
+        : listed
+          ? { ...stripStyle, flexDirection: 'column', alignItems: 'stretch', gap: '0' }
+          : stripStyle
+
+      const acceptButton = pending !== null && h('button', {
+        type: 'button',
+        onClick: () => { acceptRef.current?.() },
+        disabled: pending.draftAt !== draft,
+        title: pending.draftAt !== draft
+          ? t('strip.draftChanged')
+          : total > 1 && draft === '' ? t('strip.acceptHint') : t('strip.accept'),
+        style: {
+          opacity: pending.draftAt !== draft ? '0.45' : '1',
+          cursor: pending.draftAt !== draft ? 'not-allowed' : 'pointer',
+          border: 'none',
+          background: 'var(--dsw-alias-brand-primary)',
+          color: 'var(--dsw-alias-bg-base)',
+          borderRadius: '8px', padding: '3px 12px',
+          fontSize: '12px', fontWeight: '600', lineHeight: '1.6',
+          whiteSpace: 'nowrap',
+        },
+      }, t('strip.accept'))
+
+      const dismissButton = pending !== null && h('button', {
+        type: 'button',
+        onClick: () => {
+          void recordFeedback('dismiss', currentCandidate(sessionId))
+          clear('dismiss')
+        },
+        title: t('strip.dismiss'),
+        style: {
+          cursor: 'pointer', border: '1px solid var(--dsw-alias-border-l1)',
+          background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
+          borderRadius: '8px', padding: '3px 10px',
+          fontSize: '12px', lineHeight: '1.6',
+          whiteSpace: 'nowrap',
+        },
+      }, t('strip.dismiss'))
+
+      const header = h('div', {
+        style: { display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 },
+      },
+      h('span', { style: stripBadge }, inline && ghost !== '' ? t('strip.preview') : badge),
+      // Everything that qualifies the suggestion sits in one muted run, separated by a
+      // middot, so the header reads as a sentence instead of a row of competing chips.
+      h('span', {
+        style: {
+          flex: '0 0 auto', minWidth: 0, overflow: 'hidden',
+          fontSize: '11px', lineHeight: '1.6',
+          color: 'var(--dsw-alias-label-secondary)', whiteSpace: 'nowrap',
+          textOverflow: 'ellipsis',
+        },
+      }, [confidenceText, counter, inline && total > 1 && draft === '' ? t('strip.cycle') : null]
+        .filter(part => part !== null && part !== '').join(' \u00b7 ')),
+      h('span', { style: { flex: '1 1 auto' } }),
+      h('span', { style: stripActions }, acceptButton, dismissButton))
+
+      const list = listed
+        ? h('div', {
+          style: { display: 'flex', flexDirection: 'column', gap: '6px', marginTop: '8px' },
+          role: 'group', 'aria-label': t('strip.candidates'),
+        },
+        [...Array(total).keys()].map(index => h('button', {
+          key: index,
+          type: 'button',
+          'aria-pressed': pickedForSession?.has(index) === true,
+          'aria-label': t('strip.rowLabel').replace('{n}', String(index + 1)).replace('{total}', String(total)),
+          onClick: () => {
+            // Clicking a row also shows it, so a mouse never acts on a hidden pick.
+            candidateIndexBySession.set(sessionId, index)
+            togglePicked(sessionId, index)
           },
-        }, confidenceText),
-        h('span', { style: inline && ghost !== '' ? {
+          style: pickedForSession?.has(index) === true
+            ? candidateRowPicked
+            : index === candidateIndex(sessionId) ? candidateRowShown : candidateRow,
+        },
+        h('span', {
+          // On the filled row the numeral has to invert too, or it disappears.
+          style: pickedForSession?.has(index) === true
+            ? { ...candidateIndexLabel, color: 'var(--dsw-alias-bg-base)' }
+            : candidateIndexLabel,
+        }, `${index + 1}`),
+        h('span', {
+          style: pickedForSession?.has(index) === true ? candidateTextPicked : stripText,
+        }, String(candidateList[index] ?? '')))))
+        : h('span', { style: inline && ghost !== '' ? {
           ...stripText, position: 'absolute', width: '1px', height: '1px',
           overflow: 'hidden', clipPath: 'inset(50%)',
-        } : stripText }, pending !== null ? text : ''),
-        counter !== '' && h('span', { style: stripBadge }, counter),
-        inline && total > 1 && draft === '' && h('span', { style: stripBadge }, t('strip.cycle')),
-        h('span', { style: stripActions },
-          pending !== null && h('button', {
-            type: 'button',
-            onClick: () => { acceptRef.current?.() },
-            disabled: pending.draftAt !== draft,
-            title: pending.draftAt !== draft ? t('strip.draftChanged')
-              : total > 1 && draft === '' ? t('strip.acceptHint') : t('strip.accept'),
-            style: {
-              opacity: pending.draftAt !== draft ? '0.5' : '1',
-              cursor: pending.draftAt !== draft ? 'default' : 'pointer', border: 'none',
-              background: 'var(--dsw-alias-brand-primary)',
-              color: 'var(--dsw-alias-bg-base)',
-              borderRadius: '6px', padding: '3px 12px',
-              fontSize: '12px', fontWeight: '600', lineHeight: '1.6',
-              whiteSpace: 'nowrap',
-            },
-          }, t('strip.accept')),
-          pending !== null && h('button', {
-            type: 'button',
-            onClick: () => {
-              void recordFeedback('dismiss', currentCandidate(sessionId))
-              clear('dismiss')
-            },
-            title: t('strip.dismiss'),
-            style: {
-              cursor: 'pointer', border: '1px solid var(--dsw-alias-border-l1)',
-              background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
-              borderRadius: '6px', padding: '3px 10px', fontSize: '12px', lineHeight: '1.6',
-              whiteSpace: 'nowrap',
-            },
-          }, t('strip.dismiss')),
-        ),
-      )
+        } : { ...stripText, paddingTop: '2px' } }, pending !== null ? text : '')
+
+      return h('div', {
+        style: rootStyle, role: 'status', 'aria-live': 'polite', 'data-composer-assist-bar': '',
+      }, header, list)
     }
 
-    /** Predict the next message on demand, from the composer tool row. */
-    function PredictButton({ t }) {
-      const [busy, setBusy] = useState(false)
-      const [hasSuggestion, setHasSuggestion] = useState(false)
-      const busyTimer = useRef(undefined)
-
-      // Mirror the strip's pending state so the label can say "regenerate" when one
-      // is already showing.
-      useEffect(() => {
-        const read = () => { setHasSuggestion(manualRequest.hasSuggestion?.() === true) }
-        read()
-        // Two independent slots: whichever mounts first cannot rely on the other's
-        // subscription being published yet, so also re-read on a slow tick.
-        const timer = setInterval(read, 1000)
-        const off = manualRequest.subscribe?.(read)
-        return () => { clearInterval(timer); off?.(); clearTimeout(busyTimer.current) }
-      }, [])
-
-      const run = () => {
-        const fire = manualRequest.current
-        // Report the miss: a silent no-op is indistinguishable from a dead button.
-        if (fire === undefined) { reportProbe({ phase: 'click-miss', reason: 'no-channel' }); return }
-        if (busyTimer.current !== undefined) return
-        setBusy(true)
-        reportProbe({ phase: 'manual-fire', cause: 'click' })
-        // Release on a timer this component owns. A cross-component "settled"
-        // callback depends on the strip re-rendering, which can be skipped — that
-        // left the button permanently disabled. 3s is a floor, not a correctness
-        // dependency: the request itself keeps running regardless.
-        busyTimer.current = setTimeout(() => {
-          busyTimer.current = undefined
-          setBusy(false)
-        }, 3000)
-        try { fire('next') } catch { /* the strip reports its own failures */ }
-      }
-
-      const label = busy ? t('predict.busy')
-        : hasSuggestion ? t('predict.again') : t('predict.title')
-
-      return h('button', {
-        type: 'button',
-        onClick: run,
-        // Deliberately NOT disabled: a stuck `busy` would make the button
-        // unclickable with no way back. The handler guards against re-entry.
-        'aria-disabled': busy || undefined,
-        title: label,
-        'aria-label': label,
-        style: {
-          display: 'inline-flex', alignItems: 'center', gap: '4px',
-          cursor: busy ? 'default' : 'pointer',
-          border: '1px solid var(--dsw-alias-border-l1)',
-          background: 'transparent',
-          color: 'var(--dsw-alias-label-secondary)',
-          borderRadius: '6px', padding: '2px 6px', minHeight: '24px',
-          fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
-          whiteSpace: 'nowrap',
-          opacity: busy ? '0.6' : '1',
-        },
-      }, [h('span', { key: 'icon', 'aria-hidden': true }, busy ? '\u22ef' : '\u2192'),
-        h('span', { key: 'label' }, t('predict.short'))])
-    }
 
     function RequestTiming({ sessionId, settings, t }) {
       const [, redraw] = useState(0)
@@ -1178,8 +1456,13 @@ window.__ModuleLoader__.load({
       ])
     }
 
-    /** ✨ button in the composer tool row; rewrites the current draft into it. */
-    function PolishButton({ sessionId, useInput, inputActions, t }) {
+    /**
+     * One ✨ button in the composer tool row: a menu picks polish or predict.
+     * The two actions stay separate because their results differ — polish rewrites
+     * the draft, predict only fills the strip above it — so they are never fused
+     * into one click whose effect the user cannot predict.
+     */
+    function AssistButton({ sessionId, useInput, inputActions, t, loadCatalog }) {
       const draft = useInput(state => state.draft)
       const phase = useInput(state => state.phase)
       trackDraft(sessionId, draft)
@@ -1187,52 +1470,333 @@ window.__ModuleLoader__.load({
       live.current = { sessionId, draft, phase }
       const mounted = useRef(true)
       useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
-      const [busy, setBusy] = useState(false)
-      const [failed, setFailed] = useState(false)
-      const idle = draft.trim() !== '' && phase === 'plain' && !busy
+      const [polishBusy, setPolishBusy] = useState(false)
+      const [polishFailed, setPolishFailed] = useState(false)
+      const polishIdle = draft.trim() !== '' && phase === 'plain' && !polishBusy
 
-      const run = async () => {
-        if (!idle) return
-        const id = nextRequestId(sessionId)
-        const revision = draftBySession.get(sessionId).revision
-        const unchanged = () => mounted.current && live.current.sessionId === sessionId
-          && live.current.draft === draft && live.current.phase === 'plain'
-          && draftBySession.get(sessionId)?.revision === revision && currentRequestId(sessionId) === id
-        setBusy(true); setFailed(false)
+      const [predictBusy, setPredictBusy] = useState(false)
+      const [hasSuggestion, setHasSuggestion] = useState(false)
+      const busyTimer = useRef(undefined)
+      // Mirror the strip's pending state so the menu can say "regenerate" when one
+      // is already showing.
+      useEffect(() => {
+        const read = () => { setHasSuggestion(manualRequest.hasSuggestion?.() === true) }
+        read()
+        // Two independent slots: whichever mounts first cannot rely on the other's
+        // subscription being published yet, so also re-read on a slow tick.
+        const timer = setInterval(read, 1000)
+        const off = manualRequest.subscribe?.(read)
+        return () => { clearInterval(timer); off?.(); clearTimeout(busyTimer.current) }
+      }, [])
+
+      const [open, setOpen] = useState(false)
+      const [showSettings, setShowSettings] = useState(false)
+      const box = useRef(null)
+      const button = useRef(null)
+      const menuAnchor = useRef(null)
+      // The toolbar sits inside clipping/scrolling ancestors, so an absolutely
+      // positioned panel is cut off and reads as a dead click. Anchor a fixed
+      // panel to the measured button rect instead.
+      const [anchor, setAnchor] = useState(null)
+      const openMenu = () => {
+        const rect = menuAnchor.current?.getBoundingClientRect()
+        if (rect !== undefined && rect !== null) setAnchor({ left: rect.left, bottom: window.innerHeight - rect.top })
+        setOpen(true)
+      }
+      useEffect(() => {
+        if (!open) return
+        const onKey = event => { if (event.key === 'Escape') { setShowSettings(false); setOpen(false) } }
+        const onDown = event => {
+          const target = event.target
+          if (box.current?.contains(target) === true || menuAnchor.current?.contains(target) === true) return
+          setShowSettings(false); setOpen(false)
+        }
+        document.addEventListener('keydown', onKey)
+        document.addEventListener('mousedown', onDown)
+        return () => {
+          document.removeEventListener('keydown', onKey)
+          document.removeEventListener('mousedown', onDown)
+        }
+      }, [open])
+
+      const runPolish = async () => {
+        setOpen(false)
+        if (!polishIdle) return
+        // Go through runRequest so the id/revision bookkeeping is the same one the
+        // predict path uses. Calling request() directly passed a stale revision, so the
+        // reply never looked owned and the polished text was silently dropped.
+        setPolishBusy(true); setPolishFailed(false)
         try {
-          const { text } = await request('polish', sessionId, draft, revision)
-          if (text !== '' && unchanged()) inputActions.setDraft(text)
+          const result = await runRequest('polish', sessionId, draft, 'manual')
+          const stillMine = () => mounted.current && live.current.sessionId === sessionId
+            && live.current.draft === draft && live.current.phase === 'plain'
+          const text = result?.text ?? ''
+          if (text !== '' && stillMine()) inputActions.setDraft(text)
+          else if (text === '' && stillMine()) setPolishFailed(true)
         } catch {
-          if (unchanged()) setFailed(true)
+          if (mounted.current) setPolishFailed(true)
         } finally {
-          if (mounted.current) setBusy(false)
+          if (mounted.current) setPolishBusy(false)
         }
       }
 
-      return h('button', {
-        type: 'button',
-        onClick: () => { void run() },
-        disabled: !idle,
-        title: failed ? t('polish.failed') : busy ? t('polish.busy') : t('polish.title'),
-        'aria-label': t('polish.title'),
-        style: {
-          display: 'inline-flex', alignItems: 'center', gap: '4px',
-          cursor: idle ? 'pointer' : 'default',
-          // Idle is brand-tinted and readable; disabled stays visible but clearly inert.
-          border: idle ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-l1)',
-          background: idle ? 'var(--dsw-alias-bg-layer-1)' : 'transparent',
-          color: failed ? 'var(--dsw-alias-state-error-primary)'
-            : idle ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
-          borderRadius: '6px', padding: '2px 6px', minHeight: '24px',
-          fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
-          whiteSpace: 'nowrap',
+      const runPredict = () => {
+        setOpen(false)
+        const fire = manualRequest.current
+        // Report the miss: a silent no-op is indistinguishable from a dead button.
+        if (fire === undefined) { reportProbe({ phase: 'click-miss', reason: 'no-channel' }); return }
+        // Refuse a second click while the first is genuinely running: re-firing bumps
+        // the request sequence and discards the answer already in flight.
+        if (manualRequest.isBusy?.() === true) return
+        setPredictBusy(true)
+        reportProbe({ phase: 'manual-fire', cause: 'click' })
+        try { fire('next') } catch { /* the strip reports its own failures */ }
+        // Release when the channel reports the request finished, with a generous
+        // ceiling so a wedged request can never pin the button forever.
+        const poll = () => {
+          if (mounted.current !== true) return
+          if (manualRequest.isBusy?.() === true) {
+            busyTimer.current = setTimeout(poll, 250)
+            return
+          }
+          busyTimer.current = undefined
+          setPredictBusy(false)
+        }
+        busyTimer.current = setTimeout(poll, 250)
+      }
+
+      const busy = polishBusy || predictBusy
+      const polishLabel = polishFailed ? t('polish.failed') : polishBusy ? t('polish.busy') : t('polish.title')
+      const predictLabel = predictBusy ? t('predict.busy')
+        : hasSuggestion ? t('predict.again') : t('predict.title')
+      const item = {
+        display: 'flex', alignItems: 'center', gap: '6px', width: '100%',
+        textAlign: 'left', cursor: 'pointer',
+        border: 'none', background: 'transparent',
+        color: 'var(--dsw-alias-label-primary)',
+        borderRadius: '6px', padding: '6px 8px', fontSize: '12px', lineHeight: '1.5',
+      }
+      const inert = { ...item, cursor: 'default', color: 'var(--dsw-alias-label-secondary)', opacity: '0.6' }
+
+      // The primary action follows the draft: empty composer predicts, text polishes.
+      // The ▾ half is the only way to reach the other action, so a click on the main
+      // area always does exactly what its label says.
+      const primary = draft.trim() === '' ? 'predict' : 'polish'
+      const primaryLabel = primary === 'polish' ? polishLabel : predictLabel
+      const primaryBusy = primary === 'polish' ? polishBusy : predictBusy
+      const primaryEnabled = primary === 'polish' ? polishIdle : !predictBusy
+      const runPrimary = () => { if (primary === 'polish') void runPolish(); else runPredict() }
+
+      return h('div', { style: { position: 'relative', display: 'inline-flex' } },
+        h('div', {
+          ref: menuAnchor,
+          style: {
+            display: 'inline-flex', alignItems: 'stretch',
+            border: open || polishIdle ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-l1)',
+            background: open || polishIdle ? 'var(--dsw-alias-bg-layer-1)' : 'transparent',
+            borderRadius: '6px', overflow: 'hidden',
+            opacity: busy ? '0.6' : '1',
+          },
         },
-      }, [h('span', { key: 'icon', 'aria-hidden': true }, busy ? '\u22ef' : '✨'),
-        h('span', { key: 'label' }, t('polish.short'))])
+        h('button', {
+          ref: button,
+          type: 'button',
+          onClick: runPrimary,
+          // Never disabled: a stuck busy state must not make the menu unreachable.
+          'aria-disabled': busy || undefined,
+          title: polishFailed ? t('polish.failed') : primaryLabel,
+          'aria-label': primaryLabel,
+          'data-composer-assist': true,
+          style: {
+            display: 'inline-flex', alignItems: 'center', gap: '4px',
+            cursor: primaryEnabled && !busy ? 'pointer' : 'default',
+            border: 'none', background: 'transparent',
+            color: polishFailed ? 'var(--dsw-alias-state-error-primary)'
+              : polishIdle || primary === 'predict' ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
+            padding: '2px 6px', minHeight: '24px',
+            fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
+            whiteSpace: 'nowrap',
+          },
+        }, [h('span', { key: 'icon', 'aria-hidden': true }, primaryBusy ? '\u22ef' : primary === 'polish' ? '✨' : '\u2192'),
+          h('span', { key: 'label' }, t(primary === 'polish' ? 'polish.short' : 'predict.short'))]),
+        h('button', {
+          type: 'button',
+          onClick: () => { if (open) { setShowSettings(false); setOpen(false) } else openMenu() },
+          'aria-haspopup': 'menu',
+          'aria-expanded': open,
+          title: t('assist.more'),
+          'aria-label': t('assist.more'),
+          'data-composer-assist-more': true,
+          style: {
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            cursor: 'pointer', border: 'none',
+            borderLeft: '1px solid var(--dsw-alias-border-l1)',
+            background: open ? 'var(--dsw-alias-bg-layer-2)' : 'transparent',
+            color: open ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
+            padding: '2px 6px', minHeight: '24px', minWidth: '24px',
+            fontSize: '12px', lineHeight: '1.5',
+          },
+        }, h('span', { 'aria-hidden': true }, '⚙'))),
+        open && h('div', {
+          ref: box,
+          role: 'menu',
+          'aria-label': t('assist.more'),
+          'data-composer-assist-menu': true,
+          style: {
+            position: 'fixed', zIndex: 60,
+            left: `${anchor?.left ?? 0}px`,
+            bottom: `${anchor?.bottom ?? 0}px`,
+            minWidth: showSettings ? 'min(440px, calc(100vw - 32px))' : '180px',
+            maxWidth: 'calc(100vw - 24px)',
+            boxSizing: 'border-box', padding: '4px',
+            maxHeight: 'min(70vh, 560px)', overflowY: 'auto',
+            border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '10px',
+            background: 'var(--dsw-alias-bg-layer-1)',
+            boxShadow: '0 8px 24px rgba(0, 0, 0, 0.18)',
+          },
+        },
+        h('button', {
+          type: 'button', role: 'menuitem',
+          disabled: !polishIdle,
+          onClick: () => { void runPolish() },
+          title: polishLabel,
+          style: polishIdle ? item : inert,
+        }, [h('span', { key: 'icon', 'aria-hidden': true }, polishBusy ? '\u22ef' : '✨'),
+          h('span', { key: 'label' }, polishLabel)]),
+        h('button', {
+          type: 'button', role: 'menuitem',
+          'aria-disabled': predictBusy || undefined,
+          onClick: runPredict,
+          title: predictLabel,
+          style: predictBusy ? inert : item,
+        }, [h('span', { key: 'icon', 'aria-hidden': true }, predictBusy ? '\u22ef' : '\u2192'),
+          h('span', { key: 'label' }, predictLabel)]),
+        h('div', { style: { borderTop: '1px solid var(--dsw-alias-border-l1)', margin: '4px 0 0', paddingTop: '4px' } },
+          h('button', {
+            type: 'button', role: 'menuitem',
+            'aria-expanded': showSettings,
+            onClick: () => setShowSettings(value => !value),
+            title: t('settings.title'),
+            style: item,
+          }, [h('span', { key: 'icon', 'aria-hidden': true }, '\u2699'),
+            h('span', { key: 'label' }, t('settings.title'))]),
+          showSettings && h('div', { style: { padding: '4px 4px 8px' } },
+            h(SettingsSection, { t, loadCatalog, embedded: true })))))
+    }
+
+    /**
+     * Searchable model picker. A native <select> is unusable once a profile has dozens
+     * of routes: it cannot be typed into, and this list spans every provider.
+     * Typing filters by provider and model name; an empty field means "follow this
+     * session", which is also the reset action.
+     */
+    function ModelPicker({ catalog, value, t, loading, error, onOpen, onPick }) {
+      const [open, setOpen] = useState(false)
+      const [query, setQuery] = useState('')
+      const box = useRef(null)
+      const field = useRef(null)
+      useEffect(() => {
+        if (!open) return
+        const onDown = event => {
+          if (box.current?.contains(event.target) === true) return
+          setOpen(false)
+        }
+        const onKey = event => { if (event.key === 'Escape') setOpen(false) }
+        document.addEventListener('mousedown', onDown)
+        document.addEventListener('keydown', onKey)
+        return () => {
+          document.removeEventListener('mousedown', onDown)
+          document.removeEventListener('keydown', onKey)
+        }
+      }, [open])
+
+      const selected = catalog.find(entry => `${entry.provider}\u0000${entry.id}` === value)
+      const label = selected === undefined
+        ? (value === '' ? t('settings.model.inherit') : value.replace('\u0000', ' · '))
+        : `${selected.provider} · ${selected.name}`
+      const needle = query.trim().toLowerCase()
+      // Own copy of the field metrics: SettingsSection's selectStyle is scoped inside
+      // that component and not visible here.
+      const pickerField = {
+        background: 'var(--dsw-alias-bg-layer-2)', color: 'var(--dsw-alias-label-primary)',
+        border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '8px',
+        padding: '6px 10px', fontSize: '13px',
+      }
+      const matches = needle === '' ? catalog : catalog.filter(entry =>
+        `${entry.provider} ${entry.id} ${entry.name}`.toLowerCase().includes(needle))
+      const option = {
+        display: 'flex', alignItems: 'baseline', gap: '8px', width: '100%',
+        textAlign: 'left', cursor: 'pointer', border: 'none', background: 'transparent',
+        color: 'var(--dsw-alias-label-primary)',
+        borderRadius: '6px', padding: '6px 8px', fontSize: '12px', lineHeight: '1.5',
+      }
+
+      return h('div', { ref: box, style: { position: 'relative', minWidth: '260px' } },
+        h('button', {
+          type: 'button',
+          'aria-haspopup': 'listbox',
+          'aria-expanded': open,
+          'data-model-picker': true,
+          title: label,
+          onClick: () => {
+            const next = !open
+            setOpen(next)
+            if (next) { setQuery(''); onOpen?.(); field.current?.focus() }
+          },
+          style: {
+            ...pickerField, display: 'flex', alignItems: 'center', gap: '8px',
+            width: '100%', cursor: 'pointer', textAlign: 'left',
+          },
+        },
+        h('span', { style: { flex: '1 1 auto', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } }, label),
+        h('span', { 'aria-hidden': true, style: { color: 'var(--dsw-alias-label-secondary)' } }, '\u25be')),
+        open && h('div', {
+          style: {
+            position: 'absolute', top: 'calc(100% + 4px)', right: 0, zIndex: 40,
+            width: 'min(360px, 80vw)', boxSizing: 'border-box', padding: '6px',
+            border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '10px',
+            background: 'var(--dsw-alias-bg-layer-1)',
+          },
+        },
+        h('input', {
+          ref: field,
+          type: 'search',
+          value: query,
+          placeholder: t('settings.model.search'),
+          'aria-label': t('settings.model.search'),
+          onChange: event => setQuery(event.target.value),
+          style: { ...pickerField, width: '100%', minWidth: 0, marginBottom: '6px', boxSizing: 'border-box' },
+        }),
+        h('div', { role: 'listbox', style: { maxHeight: '240px', overflowY: 'auto' } },
+          h('button', {
+            type: 'button', role: 'option',
+            'aria-selected': value === '',
+            onClick: () => { onPick?.(null); setOpen(false) },
+            style: option,
+          }, t('settings.model.inherit')),
+          matches.map(entry => h('button', {
+            key: `${entry.provider}\u0000${entry.id}`,
+            type: 'button', role: 'option',
+            'aria-selected': `${entry.provider}\u0000${entry.id}` === value,
+            onClick: () => { onPick?.(entry); setOpen(false) },
+            style: `${entry.provider}\u0000${entry.id}` === value
+              ? { ...option, background: 'var(--dsw-alias-bg-layer-2)' } : option,
+          },
+          h('span', { style: { flex: '1 1 auto', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' } }, entry.name),
+          h('span', { style: { flex: '0 0 auto', fontSize: '11px', color: 'var(--dsw-alias-label-secondary)' } }, entry.provider))),
+          // Say which of the three reasons applies: a failed read, a slow one, or a
+          // filter that simply matched nothing. They need different user actions.
+          matches.length === 0 && h('div', {
+            style: {
+              padding: '8px', fontSize: '12px', lineHeight: '1.5',
+              color: error !== '' ? 'var(--dsw-alias-state-error-primary)' : 'var(--dsw-alias-label-secondary)',
+              wordBreak: 'break-word',
+            },
+          }, error !== '' ? error : loading ? t('settings.model.loading') : t('settings.model.noMatch')))))
     }
 
     /** Full settings page in the left nav: switch, mode, model, and the numbers. */
-    function SettingsSection({ t, loadCatalog }) {
+    function SettingsSection({ t, loadCatalog, embedded = false }) {
       const [settings, setSettings] = useState(settingsStore.value)
       const [catalog, setCatalog] = useState([])
       const [error, setError] = useState('')
@@ -1251,37 +1815,36 @@ window.__ModuleLoader__.load({
         const body = await saveSettings(patch)
         if (body?.ok !== true) setError(t('settings.saveFailed'))
       }
+      const [catalogState, setCatalogState] = useState('idle')
+      const [catalogError, setCatalogError] = useState('')
       const refreshCatalog = async () => {
-        if (catalog.length > 0) return
+        if (catalog.length > 0 || catalogState === 'loading') return
+        setCatalogState('loading')
+        setCatalogError('')
         try {
           const rows = await loadCatalog()
-          if (Array.isArray(rows)) setCatalog(rows)
-          if (Array.isArray(rows) && rows.length === 0) setError(t('settings.noModels'))
+          setCatalog(Array.isArray(rows) ? rows : [])
+          setCatalogState('done')
         } catch (failure) {
-          setError(`${t('settings.catalogFailed')}${failure instanceof Error ? failure.message : String(failure)}`)
+          // Surface the reason inside the picker: "no matching model" alone told the
+          // user nothing about a failing catalog read.
+          setCatalogError(failure instanceof Error ? failure.message : String(failure))
+          setCatalogState('failed')
         }
       }
 
       const current = settings
-      const card = {
-        border: '1px solid var(--dsw-alias-border-l1)',
-        borderRadius: '12px',
-        background: 'var(--dsw-alias-bg-layer-1)',
-        padding: '4px 16px',
-        marginBottom: '12px',
-      }
-      const row = {
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        gap: '16px', padding: '14px 0',
-        borderTop: '1px solid var(--dsw-alias-border-l1)',
-      }
-      const first = { ...row, borderTop: 'none' }
-      const labelStyle = { fontSize: '13px', color: 'var(--dsw-alias-label-primary)' }
-      const hintStyle = { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)', marginTop: '2px' }
+      const labelStyle = { fontSize: '13px', fontWeight: '600', lineHeight: '1.5', color: 'var(--dsw-alias-label-primary)' }
+      const hintStyle = { fontSize: '12px', lineHeight: '1.5', color: 'var(--dsw-alias-label-secondary)', marginTop: '1px' }
+      // One width for every control: the right-hand column lines up, which reads as
+      // order far more than any added border or tint could.
       const selectStyle = {
         background: 'var(--dsw-alias-bg-layer-2)', color: 'var(--dsw-alias-label-primary)',
         border: '1px solid var(--dsw-alias-border-l1)', borderRadius: '8px',
-        padding: '6px 10px', fontSize: '13px', minWidth: '220px',
+        padding: '6px 10px', fontSize: '13px', lineHeight: '1.5',
+        // Sized to its own longest option, not a fixed width: a hard 200px clipped
+        // "输入框上方的建议栏（推荐）" mid-word.
+        boxSizing: 'border-box', width: 'auto', minWidth: '210px', maxWidth: '300px',
       }
       const value = current?.provider !== undefined && current?.provider !== ''
         ? `${current.provider}\u0000${current.model}` : ''
@@ -1295,32 +1858,164 @@ window.__ModuleLoader__.load({
         style: { ...selectStyle, minWidth: '120px' },
       })
 
-      return h('div', { style: { padding: '8px 0 24px' } },
-        h('h2', { style: { fontSize: '16px', margin: '0 0 6px', color: 'var(--dsw-alias-label-primary)' } },
-          t('settings.title')),
-        h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)', margin: '0 0 16px' } },
-          t('settings.description')),
+      // Modelled on the Host's own settings pages: no cards, no shadows, no eyebrow
+      // labels. One column, a plain heading, then rows separated by hairlines. The
+      // controls align on a single right edge, which is what makes a long list readable.
+      // Group labels sit below the row labels in weight: they divide the list, they are
+      // not headings to read. Same reason the first row under one has no top border.
+      const sectionHeading = title => h('div', {
+        style: {
+          fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
+          color: 'var(--dsw-alias-label-secondary)',
+          margin: '20px 0 2px',
+        },
+      }, title)
 
-        h('div', { style: card },
-          h('div', { style: first },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.enabled')),
-              h('div', { style: hintStyle }, t('settings.enabledHint'))),
-            h('input', {
-              type: 'checkbox',
-              checked: current?.enabled === true,
-              onChange: event => { void save({ enabled: event.target.checked }) },
-            })),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.learn')),
-              h('div', { style: hintStyle }, t('settings.learnHint'))),
+      const control = {
+        flex: '0 0 auto', display: 'flex', alignItems: 'center',
+        justifyContent: 'flex-end', gap: '10px',
+      }
+
+      const settingRow = (label, hint, node, { top = true } = {}) => h('div', {
+        style: {
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          gap: '24px', padding: '11px 0',
+          borderTop: top ? '1px solid var(--dsw-alias-border-l1)' : 'none',
+        },
+      },
+      h('div', { style: { minWidth: 0 } },
+        h('div', { style: labelStyle }, label),
+        h('div', { style: hintStyle }, hint)),
+      h('div', { style: control }, node))
+
+      const toggle = (key, checked) => h('input', {
+        type: 'checkbox',
+        checked,
+        onChange: event => { void save({ [key]: event.target.checked }) },
+      })
+
+      const modeValue = current?.mode ?? 'auto'
+      const displayValue = current?.display === 'inline' ? 'inline' : 'bar'
+
+      // Numeric fields carry their unit inside the field, so the column stays aligned
+      // without a second text element floating beside every input.
+      /**
+       * Numeric field. Values are stored as the plugin uses them (milliseconds), but a
+       * duration is shown in seconds so nobody divides 45000 by 1000 in their head.
+       * `per` is the factor between the shown number and the stored one.
+       */
+      const unit = (key, bounds, suffix, per = 1) => {
+        const stored = current?.[key]
+        const shown = Number.isFinite(stored) ? stored / per : ''
+        return h('div', {
+          style: { display: 'flex', alignItems: 'center', gap: '8px' },
+        },
+        h('input', {
+          type: 'number',
+          step: per === 1 ? 1 : 0.5,
+          min: bounds[0] / per, max: bounds[1] / per,
+          value: shown,
+          onChange: event => {
+            const parsed = Number(event.target.value)
+            if (!Number.isFinite(parsed)) return
+            void save({ [key]: Math.round(parsed * per) })
+          },
+          style: { ...selectStyle, width: '110px', minWidth: '110px', textAlign: 'right' },
+        }),
+        h('span', {
+          style: { fontSize: '11px', color: 'var(--dsw-alias-label-secondary)', minWidth: '26px' },
+        }, suffix))
+      }
+
+      return h('div', { style: { padding: embedded ? '0' : '4px 0 32px', maxWidth: '680px' } },
+        // No heading at all. The settings nav already labels this page, and the popover
+        // is opened from a menu item that names it — a third copy was pure repetition.
+        h('p', {
+          style: {
+            fontSize: '12px', lineHeight: '1.6', margin: '0 0 2px',
+            color: 'var(--dsw-alias-label-secondary)',
+          },
+        }, t('settings.description')),
+
+        sectionHeading(t('settings.group.behavior')),
+        h('div', null,
+          settingRow(
+            t('settings.enabled'), t('settings.enabledHint'),
+            toggle('enabled', current?.enabled === true), { top: false }),
+          settingRow(
+            t('settings.mode'), t('settings.modeHint'),
+            h('select', {
+              style: selectStyle,
+              value: modeValue,
+              onChange: event => { void save({ mode: event.target.value }) },
+            }, ['auto', 'word', 'both', 'off'].map(mode => h('option', { key: mode, value: mode }, t(`settings.mode.${mode}`))))),
+          settingRow(
+            t('settings.display'), t('settings.displayHint'),
+            h('select', {
+              style: selectStyle,
+              value: displayValue,
+              onChange: event => { void save({ display: event.target.value }) },
+            }, ['bar', 'inline'].map(display => h('option', { key: display, value: display }, t(`settings.display.${display}`))))),
+          settingRow(
+            t('settings.model'), t('settings.modelHint'),
+            h(ModelPicker, {
+              catalog,
+              value,
+              t,
+              loading: catalogState === 'loading',
+              error: catalogState === 'failed' ? catalogError : '',
+              onOpen: () => { void refreshCatalog() },
+              onPick: entry => { void save(entry === null ? { provider: '', model: '' } : { provider: entry.provider, model: entry.id }) },
+            }))),
+
+        sectionHeading(t('settings.group.budget')),
+        h('div', null,
+          settingRow(
+            t('settings.maxOutputTokens'), t('settings.maxOutputTokensHint'),
+            unit('maxOutputTokens', [100, 4000], 'tok'), { top: false }),
+          settingRow(
+            t('settings.debounceMs'), t('settings.debounceMsHint'),
+            unit('debounceMs', [200, 5000], 's', 1000)),
+          settingRow(
+            t('settings.timeoutMs'), t('settings.timeoutMsHint'),
+            unit('timeoutMs', [2000, 120000], 's', 1000)),
+          settingRow(
+            t('settings.maxInputChars'), t('settings.maxInputCharsHint'),
+            unit('maxInputChars', [1000, 100000], 'chars')),
+          settingRow(
+            t('settings.minConfidence'), t('settings.minConfidenceHint'),
+            unit('minConfidence', [0, 1], '0–1', 0.1))),
+
+        // One way back: a mistyped budget or timeout had no undo except remembering the
+        // old number. Values come from the Host's own DEFAULTS, not a client copy.
+        h('div', { style: { display: 'flex', justifyContent: 'flex-end', padding: '10px 0 0' } },
+          h('button', {
+            type: 'button',
+            onClick: async () => {
+              const d = settingsStore.defaults
+              if (d === undefined) return
+              setError('')
+              const patch = {}
+              for (const key of ['maxOutputTokens', 'debounceMs', 'timeoutMs', 'maxInputChars', 'minConfidence']) {
+                if (d[key] !== undefined) patch[key] = d[key]
+              }
+              const body = await saveSettings(patch)
+              if (body?.ok !== true) setError(t('settings.saveFailed'))
+            },
+            title: t('settings.restoreHint'),
+            style: {
+              cursor: 'pointer', border: 'none', background: 'transparent',
+              color: 'var(--dsw-alias-label-secondary)',
+              padding: '2px 4px', fontSize: '12px', textDecoration: 'underline',
+            },
+          }, t('settings.restore'))),
+
+        sectionHeading(t('settings.group.learning')),
+        h('div', null,
+          settingRow(
+            t('settings.learn'), t('settings.learnHint'),
             h('div', { style: { display: 'flex', alignItems: 'center', gap: '10px' } },
-              h('input', {
-                type: 'checkbox',
-                checked: current?.learn === true,
-                onChange: event => { void save({ learn: event.target.checked }) },
-              }),
+              toggle('learn', current?.learn === true),
               h('button', {
                 type: 'button',
                 onClick: async () => {
@@ -1333,77 +2028,23 @@ window.__ModuleLoader__.load({
                 style: {
                   cursor: 'pointer', border: '1px solid var(--dsw-alias-border-l1)',
                   background: 'transparent', color: 'var(--dsw-alias-label-secondary)',
-                  borderRadius: '8px', padding: '4px 10px', fontSize: '12px',
+                  borderRadius: '8px', padding: '5px 12px', fontSize: '12px',
                 },
-              }, t('settings.reset')))),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.mode')),
-              h('div', { style: hintStyle }, t('settings.modeHint'))),
-            h('select', {
-              style: selectStyle,
-              value: current?.mode ?? 'auto',
-              onChange: event => { void save({ mode: event.target.value }) },
-            }, ['auto', 'word', 'both', 'off'].map(mode => h('option', { key: mode, value: mode }, t(`settings.mode.${mode}`))))),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.display')),
-              h('div', { style: hintStyle }, t('settings.displayHint'))),
-            h('select', {
-              style: selectStyle,
-              value: current?.display === 'inline' ? 'inline' : 'bar',
-              onChange: event => { void save({ display: event.target.value }) },
-            }, ['bar', 'inline'].map(display => h('option', { key: display, value: display }, t(`settings.display.${display}`))))),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.model')),
-              h('div', { style: hintStyle }, t('settings.modelHint'))),
-            h('select', {
-              style: selectStyle,
-              value,
-              onFocus: () => { void refreshCatalog() },
-              onChange: event => {
-                const raw = event.target.value
-                if (raw === '') { void save({ provider: '', model: '' }); return }
-                const [provider, model] = raw.split('\u0000')
-                void save({ provider, model })
-              },
-            },
-            h('option', { value: '' }, t('settings.model.inherit')),
-            catalog.map(entry => h('option', { key: `${entry.provider}\u0000${entry.id}`, value: `${entry.provider}\u0000${entry.id}` }, `${entry.provider} · ${entry.name}`)))),
-        ),
+              }, t('settings.reset'))), { top: false })),
 
-        h('div', { style: card },
-          h('div', { style: first },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.maxOutputTokens')),
-              h('div', { style: hintStyle }, t('settings.maxOutputTokensHint'))),
-            number('maxOutputTokens', 100, 4000)),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.debounceMs')),
-              h('div', { style: hintStyle }, t('settings.debounceMsHint'))),
-            number('debounceMs', 200, 5000)),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.timeoutMs')),
-              h('div', { style: hintStyle }, t('settings.timeoutMsHint'))),
-            number('timeoutMs', 2000, 120000)),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.maxInputChars')),
-              h('div', { style: hintStyle }, t('settings.maxInputCharsHint'))),
-            number('maxInputChars', 1000, 100000)),
-          h('div', { style: row },
-            h('div', null,
-              h('div', { style: labelStyle }, t('settings.minConfidence')),
-              h('div', { style: hintStyle }, t('settings.minConfidenceHint'))),
-            number('minConfidence', 0, 1)),
-        ),
-
-        h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)', margin: '4px 0 0' } },
-          t('settings.costNote')),
-        error !== '' && h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-state-error-primary)' } }, error),
+        h('p', {
+          style: {
+            fontSize: '12px', lineHeight: '1.6', margin: '20px 0 0',
+            color: 'var(--dsw-alias-label-secondary)',
+          },
+        }, t('settings.costNote')),
+        h('p', {
+          style: {
+            fontSize: '12px', lineHeight: '1.6', margin: '8px 0 0',
+            color: 'var(--dsw-alias-label-secondary)',
+          },
+        }, t('settings.subagentNote')),
+        error !== '' && h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-state-error-primary)', marginTop: '12px' } }, error),
       )
     }
 
@@ -1419,11 +2060,29 @@ window.__ModuleLoader__.load({
 
         /** Every routable model, flattened for the picker; failures degrade to "follow this session". */
         const loadCatalog = async () => {
-          const result = await ctx.remote.session.modelCatalog()
-          if (result?.ok !== true) throw new Error(result?.error?.message ?? 'model catalog unavailable')
+          // The Client side has no llm service (only layout, locale, sessions, slots,
+          // theme, timer, workspaces), so it cannot enumerate providers itself. The Host
+          // exposes the catalog over this plugin's own authenticated route instead.
+          const response = await fetch(`${API}/models`)
+          let body
+          try {
+            body = await readJsonResponse(response, 'models')
+          } catch (failure) {
+            // Name the realistic cause first: an unregistered route answers as plain text.
+            if (!response.ok) throw new Error(`${t('settings.model.routeMissing')} (HTTP ${response.status})`)
+            throw new Error(`${t('settings.model.badResponse')}: ${failure.message}`)
+          }
+          if (body.ok !== true) throw new Error(body.error ?? body.reason ?? t('settings.model.badResponse'))
+          if (!Array.isArray(body.models)) throw new Error(t('settings.model.badResponse'))
           const rows = []
-          for (const group of result.value.groups) {
-            for (const model of group.models) rows.push({ provider: group.id, id: model.id, name: model.name })
+          for (const entry of body.models) {
+            if (entry === null || typeof entry !== 'object') continue
+            if (typeof entry.provider !== 'string' || typeof entry.id !== 'string') continue
+            rows.push({
+              provider: entry.provider,
+              id: entry.id,
+              name: typeof entry.name === 'string' && entry.name !== '' ? entry.name : entry.id,
+            })
           }
           return rows
         }
@@ -1451,17 +2110,15 @@ window.__ModuleLoader__.load({
         }, StripSlot))
 
         ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
-          name: 'conversation.input.left', id: 'composer-assist-predict', order: 9, locale: NS,
-        }, PredictButton))
-
-        ctx.slots.inject('conversation.input.left', () => ctx.slots.register({
-          name: 'conversation.input.left', id: 'composer-assist-polish', order: 10, locale: NS,
-        }, PolishButton))
+          name: 'conversation.input.left', id: 'composer-assist-assist', order: 10, locale: NS,
+          inject: () => ({ loadCatalog }),
+        }, AssistButton))
 
         // One page in the settings left nav; no row in General.
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section', id: 'composer-assist', order: 35, locale: NS,
-          label: () => t('settings.title'),
+          // Short label: this is a nav row, and the full name lives in the menu item.
+          label: () => t('settings.nav'),
           inject: () => ({ loadCatalog }),
         }, SettingsSection))
 

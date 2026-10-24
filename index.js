@@ -6,12 +6,13 @@
  * Kept dependency-free on purpose: only node builtins and the injected Cordis
  * services, so a profile upgrade cannot break the module at import time.
  */
-import { readFile, writeFile, mkdir } from 'node:fs/promises'
+import { readFile, writeFile, mkdir, appendFile, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 
 const SETTINGS_PATH = '/api/composer-assist/settings'
 const SUGGEST_PATH = '/api/composer-assist/suggest'
 const TURN_PATH = '/api/composer-assist/turn'
+const MODELS_PATH = '/api/composer-assist/models'
 const PROBE_PATH = '/api/composer-assist/probe'
 const FEEDBACK_PATH = '/api/composer-assist/feedback'
 
@@ -54,6 +55,31 @@ const predictingIn = new Map()
  */
 const deliveredTurns = new Map()
 
+/**
+ * Append-only trail for one prediction. Written because "result expired" kept being
+ * reported while every candidate cause stayed unprovable from outside the Host: the
+ * browser only ever saw an empty result. Bounded by size, never holds prompt text.
+ */
+const diagnosticFile = () => join(process.env.DSH_HOME ?? join(process.env.HOME ?? '.', '.dsh'), 'composer-assist', 'diagnostics.jsonl')
+let diagnosticQueue = Promise.resolve()
+function trace(entry) {
+  const line = JSON.stringify({ at: new Date().toISOString(), ...entry })
+  diagnosticQueue = diagnosticQueue.then(async () => {
+    try {
+      const target = diagnosticFile()
+      await mkdir(dirname(target), { recursive: true })
+      await appendFile(target, `${line}\n`, 'utf8')
+      const info = await stat(target)
+      if (info.size > 262144) {
+        const text = await readFile(target, 'utf8')
+        const lines = text.split('\n').filter(Boolean)
+        await writeFile(target, `${lines.slice(Math.floor(lines.length / 2)).join('\n')}\n`, 'utf8')
+      }
+    } catch { /* diagnostics must never break a prediction */ }
+  })
+  return diagnosticQueue
+}
+
 /** Bundle-relative settings file; the Host home is the documented per-user store. */
 const settingsFile = () => join(process.env.DSH_HOME ?? join(process.env.HOME ?? '.', '.dsh'), 'composer-assist', 'settings.json')
 
@@ -72,7 +98,7 @@ const DEFAULTS = {
   model: '',
   maxInputChars: 12000,
   // Reasoning consumes output budget too; whether this is an upstream cap depends on the provider.
-  maxOutputTokens: 600,
+  maxOutputTokens: 1200,
   timeoutMs: 20000,
   debounceMs: 600,
   // Predictions below this confidence are dropped. 0 keeps every prediction and
@@ -566,9 +592,9 @@ export function apply(ctx) {
         try {
           if (request.method === 'POST') {
             const patch = await readJson(request)
-            return json(200, { ok: true, settings: await withSettings(() => writeSettings(patch)) })
+            return json(200, { ok: true, settings: await withSettings(() => writeSettings(patch)), defaults: { ...DEFAULTS } })
           }
-          return json(200, { ok: true, settings: await readSettings() })
+          return json(200, { ok: true, settings: await readSettings(), defaults: { ...DEFAULTS } })
         } catch (error) {
           return json(400, { ok: false, error: error instanceof Error ? error.message : String(error) })
         }
@@ -638,6 +664,31 @@ export function apply(ctx) {
       },
     }), 'composer-assist: turn route')
 
+    // The Client has no llm service (only layout, locale, sessions, slots, theme,
+    // timer, workspaces), so a picker there cannot enumerate models. The Host owns the
+    // adapter registry and answers over this plugin's own authenticated route.
+    scoped.effect(() => scoped.connection.fetch.register({
+      path: MODELS_PATH,
+      methods: ['GET'],
+      requestBody: 'buffered',
+      fetch: async () => {
+        const llm = scoped.get('llm')
+        if (llm === undefined) return json(200, { ok: true, models: [], reason: 'no-llm-service' })
+        try {
+          const models = []
+          for (const provider of llm.listProviders()) {
+            const list = await llm.listModels(provider.id)
+            for (const model of list ?? []) {
+              models.push({ provider: provider.id, id: model.id, name: model.name ?? model.id })
+            }
+          }
+          return json(200, { ok: true, models })
+        } catch (error) {
+          return json(200, { ok: false, models: [], error: error instanceof Error ? error.message : String(error) })
+        }
+      },
+    }), 'composer-assist: model catalog route')
+
     scoped.effect(() => scoped.connection.fetch.register({
       path: PROBE_PATH,
       methods: ['GET', 'POST'],
@@ -678,9 +729,16 @@ export function apply(ctx) {
         const timing = createTiming()
         const reply = data => json(200, { ...data, sessionId, source, revision: body.revision, timing: timing.finish() })
         if (body.source !== undefined && body.source !== source) return reply({ ok: true, text: '', reason: 'stale-source' })
+        // A manual click is an explicit request for a fresh answer, so it must not be
+        // discarded merely because an automatic one landed first; automatic requests keep
+        // the newest-wins rule.
+        const manual = body.cause === 'manual'
         latestRequests.set(key, ticket)
-        inflight.get(key)?.abort()
-        const stale = () => latestRequests.get(key) !== ticket || sourceOf(session) !== source
+        if (!manual) inflight.get(key)?.abort()
+        // Only a superseding request invalidates an answer. The conversation fingerprint
+        // moves for unrelated reasons — including this call's own activity — so using it
+        // as a veto discarded answers that had already finished.
+        const stale = () => !manual && latestRequests.get(key) !== ticket
         const discard = data => {
           if (latestRequests.get(key) === ticket) latestRequests.delete(key)
           return reply(data)
@@ -712,11 +770,16 @@ export function apply(ctx) {
         if (stale()) return discard({ ok: true, text: '', reason: 'stale-source' })
         const abort = new AbortController()
         inflight.set(key, abort)
-        const timer = setTimeout(() => abort.abort(new DOMException('Suggestion timed out', 'TimeoutError')), settings.timeoutMs)
+        // Declared outside the try so the finally can always clear it.
+        let timer
         try {
           const previous = runningCalls.get(key)
           timing.enter('queue')
           if (previous !== undefined) await abortable(() => previous.catch(() => {}), abort.signal)
+          // The deadline starts when this request begins talking to the model, not when
+          // it joins the queue: waiting behind an automatic prediction used to consume
+          // the whole budget and then report a timeout this request never caused.
+          timer = setTimeout(() => abort.abort(new DOMException('Suggestion timed out', 'TimeoutError')), settings.timeoutMs)
           timing.enter('prepare')
           const context = await abortable(async () => {
             try {
@@ -726,7 +789,11 @@ export function apply(ctx) {
             } catch { return '' }
           }, abort.signal)
           lastTranscript.workspaceChars = context.length
-          const prompt = [basePrompt, hint, context].filter((part) => part !== '').join('\n\n')
+          // The workspace summary lists the branch and changed files. That helps predict
+          // what the user says next, but a rewrite echoed it instead of revising the
+          // draft, so polish sees the draft and the conversation only.
+          const prompt = [basePrompt, hint, kind === 'polish' ? '' : context]
+            .filter((part) => part !== '').join('\n\n')
           if (stale()) return reply({ ok: true, text: '', reason: 'stale-source' })
           const raw = await generate(scoped, session, settings, SYSTEM[kind], prompt, abort.signal, key, timing)
           timing.enter('validate')

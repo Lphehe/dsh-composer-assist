@@ -1,4 +1,4 @@
-# 输入框预测与动态工作流 · Composer Assist
+# 输入框预测 · Composer Assist
 
 > **中文**：根据当前对话和你说话的方式，在输入框上方给出你下一条最可能发的消息，按 Tab 即可采用；同时支持输入时补全草稿、一键润色提示词。
 >
@@ -22,16 +22,12 @@
 | 手动预测 | Predict on demand from the composer tool row |
 | 草稿补全 | Completes the second half of a draft as you type |
 | 润色提示词 | Rewrites the current draft into a clearer instruction |
-| ZCode 动态工作流 | Typed persistent actors, live graphs, saved runs, stop/resume and amended continuation |
-
-动态工作流入口：会话第二排 → **工作流**。中间主区域默认展示按真实阶段分组的代理节点画布；在顶部选择运行或已保存流程，按需编辑脚本、查看阶段／节点日志／结果与产物，不使用工作流右侧栏。聊天只保留真实进度摘要。先分析并确认脚本，再运行真实子 Agent。完整操作、构建与恢复边界见 [动态工作流说明](<docs/dynamic-workflows.md>)。
 
 按 **Tab** 接受建议（填进草稿但不发送），**Esc** 隐藏，「忽略」按钮则永久丢弃。草稿为空时 **←/→** 在候选之间切换（按住修饰键、或输入法正在组合时不会拦截方向键）。
 Tab accepts a suggestion (fills the draft, does not send); Esc hides it; the dismiss button forgets it. With an empty draft, **←/→** cycles between candidates (arrows are left alone while a modifier is held or an IME is composing).
 
 ## 本机开发目录
 
-新项目会话续作先读 [交接说明](<交接.md>)，避免重做已完成工作或误改历史记录归属。
 
 规范目录为 `/Users/Admin/dsh插件`，原开发工作树已通过 `git worktree move` 迁至此处，不是另复制一份。Git 历史仍关联原 Composer 仓库，暂未拆成独立仓库；不要删除其主仓库的 Git 元数据。原桌面通过本地 bundle 链接加载这里，运行数据库仍留在原私有数据目录。经用户确认，仅将本父会话9条记录的目录归属更新到新根，ID、日志和结果不变。旧开发路径保留为指向本目录的兼容链接，解决当前宿主仍解析旧绝对路径的缓存；它不是第二份源码，确认宿主冷启动后可独立核查是否仍需保留，当前不要删除。
 
@@ -145,6 +141,6 @@ After cloning, run `node selfcheck.mjs` for parser, learning-counter and context
 
 The original program code is source-available under use-permitted, modification-prohibited terms, not an open-source license. Use of the unmodified software is permitted; modification or derivative versions require the copyright holder's prior written permission. See [LICENSE](LICENSE). These restrictions do not apply to users' own configuration, input, output or workflow scripts.
 
-第三方组件仍按其原许可证授权，不适用上述修改限制。移植的 ZCode 保留 Apache-2.0，TypeScript 库保留其原许可；详见 [来源与许可声明](vendor/zcode/PROVENANCE.md)。
+第三方组件仍按其原许可证授权，不适用上述修改限制。移植的 ZCode 保留 Apache-2.0，TypeScript 库保留其原许可；来源与许可声明见仓库中的 `vendor/zcode/PROVENANCE.md`。
 
-Third-party components retain their original licenses and are not subject to the modification restriction above; see the [provenance and license notices](vendor/zcode/PROVENANCE.md).
+Third-party components retain their original licenses and are not subject to the modification restriction above; see `vendor/zcode/PROVENANCE.md` in the repository.

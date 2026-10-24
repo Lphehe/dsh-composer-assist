@@ -1,5 +1,3 @@
 - insert:
     - id: composer-assist
       name: 'dsh-composer-assist'
-    - id: composer-assist-workflow
-      name: 'dsh-composer-assist/workflow'

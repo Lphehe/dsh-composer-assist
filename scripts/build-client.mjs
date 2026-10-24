@@ -11,16 +11,11 @@ if (source.split(marker).length !== 2) throw new Error('Composer Client activati
 await mkdir(resolve(root, 'dist'), { recursive: true })
 await build({
   stdin: {
-    contents: `import { installWorkflowUI } from './workflow/client/ui.js';\n${source.replace(marker, `${marker}\n        installWorkflowUI(ctx, React)`)}`,
+    contents: `${source}`,
     resolveDir: root, sourcefile: 'composer-workflow-client.js', loader: 'js',
   },
   bundle: true, format: 'iife', platform: 'browser', target: 'es2022',
   outfile: resolve(root, 'dist/client.js'), legalComments: 'eof',
-})
-await build({
-  entryPoints: [resolve(root, 'workflow/plugin.js')], bundle: true, format: 'esm', platform: 'node', target: 'node22',
-  external: ['@zcode/dynamic-workflow', '@zcode/dynamic-workflow-runtime'],
-  outfile: resolve(root, manifest.exports['./workflow']), legalComments: 'eof',
 })
 await build({
   entryPoints: [resolve(root, 'workflow/host/compiler-worker.js')], bundle: true, format: 'esm', platform: 'node', target: 'node22',
