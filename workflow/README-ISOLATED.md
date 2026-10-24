@@ -19,6 +19,19 @@
 
 根 `docs/` 只保留输入预测相关的验收文档。
 
+## 待办：第二步迁移
+
+`PRODUCT.md` 与 `DESIGN.md` 仍是工作流的设计文档，但留在仓库根。它们正在被另一条工作分支编辑，所以没有随本次迁移移动。
+
+合并那条分支后要一起做：
+
+1. 把 `PRODUCT.md`、`DESIGN.md` 移到 `workflow/docs/`
+2. 修 `PRODUCT.md:55` 的两处旧路径：
+   - `docs/verification.md` → `workflow/docs/verification.md`
+   - `docs/evidence-0.6.2/` → `workflow/docs/evidence-0.6.2/`
+3. 检查 `DESIGN.md` 里指向 `docs/verification.md` 的链接（约第 379 行）
+4. 全仓 grep `docs/verification.md` 与 `docs/evidence-0.6` 确认无残留
+
 ## 现状
 
 | 方面 | 状态 |
