@@ -298,7 +298,7 @@ async function gitStatus(subprocess, cwd) {
   }
 }
 
-const CONTEXT_CACHE_MS = 2000
+const CONTEXT_CACHE_MS = 5000
 const contextCache = new Map()
 
 /**

@@ -231,21 +231,22 @@ for (const change of ['phase', 'session', 'revision', 'unmount', 'none']) {
 }
 
 // Execute the actual polish callback; intervening edits cannot be overwritten.
-const polishStart = clientSource.indexOf('    function PolishButton(')
-const runStart = clientSource.indexOf('      const run = async () => {', polishStart)
-const runEnd = clientSource.indexOf("      return h('button'", runStart)
+const polishStart = clientSource.indexOf('    function AssistButton(')
+const runStart = clientSource.indexOf('      const runPolish = async () => {', polishStart)
+const runEnd = clientSource.indexOf('      const runPredict = () => {', runStart)
 assert(polishStart >= 0 && runStart > polishStart && runEnd > runStart)
 for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
   const writes = []
   let release, id = 0
   const refs = {
-    idle: true, sessionId: 'a', draft: 'original', mounted: { current: true },
+    polishIdle: true, sessionId: 'a', draft: 'original', mounted: { current: true },
+    setOpen: () => {},
     live: { current: { sessionId: 'a', draft: 'original', phase: 'plain' } },
     draftBySession: new Map([['a', { revision: 1 }]]), nextRequestId: () => ++id, currentRequestId: () => id,
-    setBusy: () => {}, setFailed: () => {}, sourceMatches: async () => true,
+    setPolishBusy: () => {}, setPolishFailed: () => {}, sourceMatches: async () => true,
     request: () => new Promise(resolve => { release = resolve }), inputActions: { setDraft: value => writes.push(value) },
   }
-  const run = runInNewContext(`(() => {${clientSource.slice(runStart, runEnd)}; return run })()`, refs)
+  const run = runInNewContext(`(() => {${clientSource.slice(runStart, runEnd)}; return runPolish })()`, refs)
   const completion = run()
   if (change === 'edit') { refs.live.current.draft = 'new input'; refs.draftBySession.set('a', { revision: 2 }) }
   if (change === 'session') refs.live.current.sessionId = 'b'
@@ -254,6 +255,56 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
   release({ text: 'polished', source: 'cut-1' })
   await completion
   assert.deepEqual(writes, change === 'none' ? ['polished'] : [], `polish guard: ${change}`)
+}
+
+// Clearing the composer restores the just-accepted suggestion, and only then.
+{
+  const restoreStart = clientSource.indexOf('      useEffect(() => {\n        if (!enabled || draft !== \'\') return')
+  const restoreEnd = clientSource.indexOf('      const inline = settings?.display', restoreStart)
+  assert(restoreStart >= 0 && restoreEnd > restoreStart, 'restore effect must exist')
+  const block = clientSource.slice(restoreStart, restoreEnd)
+
+  const makeRefs = ({ draft, stored, inflight, accepted }) => {
+    const suggestions = new Map()
+    if (stored !== undefined) suggestions.set('s', stored)
+    const acceptedMap = new Map()
+    if (accepted !== undefined) acceptedMap.set('s', accepted)
+    const pending = new Map()
+    if (inflight) pending.set('s', {})
+    const refs = {
+      enabled: true, draft, sessionId: 's',
+      suggestionBySession: suggestions, acceptedBySession: acceptedMap, pendingBySession: pending,
+      setPending: () => {}, restored: [],
+    }
+    refs.rememberSuggestion = (id, value) => { refs.restored.push([id, value]); suggestions.set(id, value) }
+    return refs
+  }
+  // Run the effect body exactly as written: strip the wrapper and the dep array.
+  const bodyStart = block.indexOf('{') + 1
+  const bodyEnd = block.lastIndexOf('}, [enabled, draft, sessionId])')
+  assert(bodyEnd > bodyStart, 'restore effect dep array must stay recognizable')
+  const body = block.slice(bodyStart, bodyEnd)
+  assert(body.includes('acceptedBySession.get(sessionId)'), 'restore body must read the accepted record')
+  const runEffect = refs => new Function('refs', `with (refs) {${body}}`)(refs)
+
+  const saved = { kind: 'next', text: 'hello', draftAt: '', candidates: ['hello'], source: 'cut-1' }
+  // 1. Empty draft + accepted record + nothing newer => restored.
+  const restore = makeRefs({ draft: '', accepted: saved })
+  runEffect(restore)
+  assert.equal(restore.restored.length, 1, 'accepted suggestion must be restored')
+  assert.deepEqual(restore.restored[0], ['s', saved])
+  // 2. A newer suggestion is stored => leave it alone.
+  const newer = makeRefs({ draft: '', stored: saved, accepted: saved })
+  runEffect(newer)
+  assert.equal(newer.restored.length, 0, 'a stored suggestion must not be replaced')
+  // 3. A request is in flight => do not interfere.
+  const inflight = makeRefs({ draft: '', inflight: true, accepted: saved })
+  runEffect(inflight)
+  assert.equal(inflight.restored.length, 0, 'in-flight prediction must not be overwritten')
+  // 4. Draft not empty => nothing restored.
+  const typing = makeRefs({ draft: 'hello', accepted: saved })
+  runEffect(typing)
+  assert.equal(typing.restored.length, 0, 'only an empty draft restores')
 }
 
 // Low reasoning is chosen only from supported controls; stream errors reject partial text.
@@ -369,13 +420,17 @@ try {
   assert.equal(first, second, 'a cached hit must return the same text')
   assert.equal(gitCalls, 1, 'a repeat inside the window must not run git again')
 
-  // Past the window it gathers again and sees new state.
+  // One millisecond before the window closes (1000 + 5000 - 1) it is still served.
+  assert.equal(await ctx('/repo', 5999), first, 'a hit just inside the window must still be served')
+  assert.equal(gitCalls, 1, 'the entry must stay valid until the window closes')
+
+  // At the boundary it gathers again and sees new state.
   filenames = ['b.ts']
-  assert.match(await ctx('/repo', 3500), /b\.ts/, 'the cache must expire after the window')
+  assert.match(await ctx('/repo', 6000), /b\.ts/, 'the cache must expire after the window')
   assert.equal(gitCalls, 2, 'expiry must trigger a fresh gather')
 
   // A different directory is its own entry.
-  await ctx('/other', 3600)
+  await ctx('/other', 6100)
   assert.equal(gitCalls, 3, 'directories must not share an entry')
 
   // A gather that yields nothing is not remembered: it may only mean the host has
