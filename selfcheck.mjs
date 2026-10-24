@@ -58,6 +58,19 @@ const cut = check.sourceOf(contextSession)
 contextSession.surface.contentGeneration++
 assert.notEqual(check.sourceOf(contextSession), cut)
 assert.match(check.SYSTEM.next, /one good candidate is enough/)
+// The assistant's own next-step suggestions look exactly like user requests; the prompt
+// has to forbid reusing them, and the transcript label must repeat that in place.
+assert.match(check.SYSTEM.next, /Never reuse or lightly reword a sentence the Assistant wrote/)
+{
+  const t = check.transcript(
+    { deriveMessages: () => [
+      { role: 'user', source: { kind: 'user' }, content: [{ type: 'text', text: 'hi' }] },
+      { role: 'assistant', content: [{ type: 'text', text: 'Change it back to 0.7.1' }] },
+    ] },
+    4000,
+  )
+  assert.match(t, /never copy or reword/, 'the assistant label must carry the constraint')
+}
 assert.match(check.SYSTEM.next, /no clear next message, output nothing/)
 assert.deepEqual(check.parseCandidates('').candidates, [])
 assert.deepEqual(check.parseCandidates('1. Only grounded intent.\nCONFIDENCE: 0.8').candidates, ['Only grounded intent.'])
@@ -385,6 +398,32 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
     'an automatic ask must not supersede a running one')
   assert(src.includes("if (via !== 'hide') nextRequestId(sessionId)"),
     'hiding a suggestion must not invalidate an answer in flight')
+}
+
+// Sending a message must retire the standing suggestion: the user moved on, and a
+// leftover candidate reads like an answer to the message just sent.
+{
+  const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
+  assert(src.includes('const started = running === true && wasRunning.current !== true'),
+    'the send transition must be detected')
+  assert(src.includes("clear('send')"), 'sending must clear the suggestion')
+  const clearAt = src.indexOf('const clear = (via) =>')
+  const effectAt = src.indexOf('// Sending a message must retire the suggestion.')
+  assert(clearAt > 0 && effectAt > clearAt, 'clear must be defined before the send effect')
+}
+
+// A session the user is not looking at must still get its prediction, and the browser
+// must not pay for a second one on the same boundary.
+{
+  const host = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
+  assert(host.includes('async function predictInBackground('), 'the Host must predict autonomously')
+  assert(host.includes('void predictInBackground(sessionId)'), 'the turn boundary must start it')
+  assert(host.includes('if (backgroundIn.has(sessionId)) return'), 'one background call per session')
+  assert(host.includes('autoSuggestions.set(sessionId'), 'the result must be stored for the browser')
+  const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
+  assert(src.includes("reportProbe({ phase: 'adopt-host'"), 'the client must adopt the Host result')
+  assert(!src.includes("void ask('next', '', 'turn-end', claimed.source)"),
+    'the client must not fire a second paid prediction for the same boundary')
 }
 
 // Every component the JSX tree renders must exist. Deleting one while a registration

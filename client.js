@@ -1016,6 +1016,7 @@ window.__ModuleLoader__.load({
        *   A hide keeps the store intact, so leaving and returning to the session
        *   restores the suggestion instead of losing it to an unrelated keypress.
        */
+
       const clear = (via) => {
         reportProbe({ phase: 'clear', via: via ?? 'unknown', instanceId: instanceId.current,
           sessionId, hadPending: pending !== null })
@@ -1047,6 +1048,17 @@ window.__ModuleLoader__.load({
         }
       }
 
+      // Sending a message must retire the suggestion. The session starts running the
+      // moment the user submits, so that transition is the signal: the old candidates
+      // described a conversation state the user has already moved past, and leaving them
+      // on screen made it look like a reply to the message just sent.
+      const wasRunning = useRef(running)
+      useEffect(() => {
+        const started = running === true && wasRunning.current !== true
+        wasRunning.current = running
+        if (started && (pending !== null || pendingBySession.has(sessionId))) clear('send')
+      }, [running])
+
       // Auto prediction: exactly one request per finished turn.
       //
       // `session.running` is a STEP-level flag — a tool-calling turn flips it off
@@ -1065,20 +1077,39 @@ window.__ModuleLoader__.load({
             // turn exactly that way, leaving nothing to show on return).
             const peek = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`)
             const seen = await readJsonResponse(peek, 'turn')
+            // The Host already generated this one, including for sessions the user was not
+            // looking at. Adopt it instead of asking a second time: one billable call per
+            // finished turn, whichever conversation it belongs to.
+            if (seen.auto !== null && seen.auto !== undefined && suggestionBySession.get(sessionId) === undefined) {
+              if (seen.turn !== null && seen.turn !== undefined) {
+                void fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`)
+              }
+              reportProbe({ phase: 'adopt-host', sessionId, count: Array.isArray(seen.auto.candidates) ? seen.auto.candidates.length : 1 })
+              rememberSuggestion(sessionId, {
+                kind: 'next', text: seen.auto.text, draftAt: '',
+                source: seen.auto.source, candidates: seen.auto.candidates, confidence: seen.auto.confidence,
+              })
+              return
+            }
             if (stopped || seen.turn === null || seen.turn === undefined) return
             // A draft in progress means the user is already writing; leave the
             // boundary UNCONSUMED so it can still serve them after they clear it.
             // (The old code consumed it here, which is why a finished turn could
             // produce nothing at all.)
             if (draftRef.current !== '') return
+            // A boundary recorded by the turn that just ended is stale the moment the
+            // user sends: the assistant is answering again and the draft is empty. Without
+            // this check the leftover boundary was claimed immediately and a prediction
+            // popped up for a conversation that had not produced its answer yet.
+            if (running === true) return
             // Claim, then ask. Only a successful claim may drop the suggestion.
             const claim = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`)
             const claimed = await readJsonResponse(claim, 'turn')
             if (claimed.turn === null || claimed.turn === undefined) return
+            // The Host predicts on this boundary already. Firing a second request here
+            // would bill the user twice for one finished turn, so the client only reads
+            // what the Host produced.
             if (blank || draftRef.current !== '') return
-            // A turn already being answered is not a reason to abandon it.
-            if (pendingBySession.has(sessionId)) return
-            void ask('next', '', 'turn-end', claimed.source)
           } catch { /* a missed poll just means no prediction for that turn */ }
         }
         void poll()
@@ -1250,7 +1281,11 @@ window.__ModuleLoader__.load({
       }, [enabled, draft, sessionId])
 
       const inline = settings?.display === 'inline'
-      const continuation = pending?.kind === 'complete' && pending.draftAt === draft && draft !== ''
+      // The session is answering: whatever is still stored belongs to the previous
+      // exchange. Hiding it during render (not in an effect) is what stops the bar from
+      // painting for one frame and disappearing — the flash the user saw on send.
+      const sending = running === true
+      const continuation = !sending && pending?.kind === 'complete' && pending.draftAt === draft && draft !== ''
       const ghost = enabled && pending !== null
         && ((pending.kind === 'next' && draft === '') || continuation)
         ? currentCandidate(sessionId) : ''
@@ -1274,6 +1309,9 @@ window.__ModuleLoader__.load({
         enabled, inline, hasPending: pending !== null, busy, failed,
         willRender: enabled && (pending !== null || busy || failed) })
       if (!enabled) return null
+      // Rendering stops here while the session answers, so no frame ever shows a stale
+      // suggestion after a send. The effect below still clears the stored state.
+      if (sending) return null
       // Inline mode keeps only a thin affordance row; the text itself is in the composer.
       if (inline && pending === null && !busy && !failed) return null
       if (!inline && pending === null && !busy && !failed) return null

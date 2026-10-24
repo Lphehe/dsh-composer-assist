@@ -911,6 +911,12 @@
             for (const listener of listeners) listener();
           }
         };
+        const wasRunning = useRef(running);
+        useEffect(() => {
+          const started = running === true && wasRunning.current !== true;
+          wasRunning.current = running;
+          if (started && (pending !== null || pendingBySession.has(sessionId))) clear("send");
+        }, [running]);
         useEffect(() => {
           if (!enabled || mode !== "auto" && mode !== "both") return void 0;
           let stopped = false;
@@ -919,14 +925,28 @@
             try {
               const peek = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`);
               const seen = await readJsonResponse(peek, "turn");
+              if (seen.auto !== null && seen.auto !== void 0 && suggestionBySession.get(sessionId) === void 0) {
+                if (seen.turn !== null && seen.turn !== void 0) {
+                  void fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`);
+                }
+                reportProbe({ phase: "adopt-host", sessionId, count: Array.isArray(seen.auto.candidates) ? seen.auto.candidates.length : 1 });
+                rememberSuggestion(sessionId, {
+                  kind: "next",
+                  text: seen.auto.text,
+                  draftAt: "",
+                  source: seen.auto.source,
+                  candidates: seen.auto.candidates,
+                  confidence: seen.auto.confidence
+                });
+                return;
+              }
               if (stopped || seen.turn === null || seen.turn === void 0) return;
               if (draftRef.current !== "") return;
+              if (running === true) return;
               const claim = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`);
               const claimed = await readJsonResponse(claim, "turn");
               if (claimed.turn === null || claimed.turn === void 0) return;
               if (blank || draftRef.current !== "") return;
-              if (pendingBySession.has(sessionId)) return;
-              void ask("next", "", "turn-end", claimed.source);
             } catch {
             }
           };
@@ -1062,7 +1082,8 @@
           setPending(saved);
         }, [enabled, draft, sessionId]);
         const inline = settings?.display === "inline";
-        const continuation = pending?.kind === "complete" && pending.draftAt === draft && draft !== "";
+        const sending = running === true;
+        const continuation = !sending && pending?.kind === "complete" && pending.draftAt === draft && draft !== "";
         const ghost = enabled && pending !== null && (pending.kind === "next" && draft === "" || continuation) ? currentCandidate(sessionId) : "";
         useEffect(() => {
           if (!inline) {
@@ -1091,6 +1112,7 @@
           willRender: enabled && (pending !== null || busy || failed)
         });
         if (!enabled) return null;
+        if (sending) return null;
         if (inline && pending === null && !busy && !failed) return null;
         if (!inline && pending === null && !busy && !failed) return null;
         const badge = busy ? t("strip.thinking") : failed ? t("strip.failed") : t(pending?.kind === "complete" ? "strip.complete" : "strip.next");
