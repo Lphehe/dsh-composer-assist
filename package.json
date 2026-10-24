@@ -4,7 +4,7 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "build": "node scripts/build-workflow.mjs && node scripts/build-client.mjs",
-    "selfcheck": "node selfcheck.mjs && node workflow/client/selfcheck.mjs && node workflow/host/compiler-selfcheck.mjs && node workflow/host/driver-selfcheck.mjs && node workflow/host/world-selfcheck.mjs && node workflow/host/selfcheck.mjs && node workflow/host/settled-effect-selfcheck.mjs && node workflow/host/settle-pair-selfcheck.mjs && node workflow/host/plugin-selfcheck.mjs && node vendor/zcode/ui-presets/selfcheck.mjs"
+    "selfcheck": "node selfcheck.mjs && node workflow/client/selfcheck.mjs && node workflow/host/compiler-selfcheck.mjs && node workflow/host/driver-selfcheck.mjs && node workflow/host/world-selfcheck.mjs && node workflow/host/selfcheck.mjs && node workflow/host/settled-effect-selfcheck.mjs && node workflow/host/settle-pair-selfcheck.mjs && node workflow/host/plugin-selfcheck.mjs && node scripts/bundle-freshness-selfcheck.mjs && node vendor/zcode/ui-presets/selfcheck.mjs"
   },
   "dependencies": {
     "@zcode/dynamic-workflow": "file:vendor/zcode/dynamic-workflow",
