@@ -344,4 +344,49 @@ try {
   if (home === undefined) delete process.env.DSH_HOME
   else process.env.DSH_HOME = home
 }
+// Workspace context is gathered after every finished turn, so the git call it
+// makes must not repeat inside the window. Count real gathers, not cache hits.
+{
+  const real = check.workspaceContext
+  check.contextCache.clear()
+  // Count every git invocation: that is the expensive part being cached.
+  let gitCalls = 0
+  let filenames = ['a.ts']
+  const providers = {
+    fs: { resolve: async cwd => cwd, listDir: async () => filenames.map(name => ({ name, type: 'file' })) },
+    subprocess: {
+      spawn() {
+        gitCalls++
+        return { done: Promise.resolve({ exitCode: 0 }), collected: { stdout: { readFrom: () => ({ text: '## main' }) } }, terminate() {} }
+      },
+    },
+  }
+  const ctx = (cwd, now) => check.cachedWorkspaceContext(providers, cwd, 8, now)
+
+  // Same directory twice inside the window: one git call, identical text.
+  const first = await ctx('/repo', 1000)
+  const second = await ctx('/repo', 1500)
+  assert.equal(first, second, 'a cached hit must return the same text')
+  assert.equal(gitCalls, 1, 'a repeat inside the window must not run git again')
+
+  // Past the window it gathers again and sees new state.
+  filenames = ['b.ts']
+  assert.match(await ctx('/repo', 3500), /b\.ts/, 'the cache must expire after the window')
+  assert.equal(gitCalls, 2, 'expiry must trigger a fresh gather')
+
+  // A different directory is its own entry.
+  await ctx('/other', 3600)
+  assert.equal(gitCalls, 3, 'directories must not share an entry')
+
+  // A gather that yields nothing is not remembered: it may only mean the host has
+  // not wired the fs service yet.
+  check.contextCache.clear()
+  assert.equal(await check.cachedWorkspaceContext({}, '/repo', 8, 1000), '', 'no providers means no context')
+  assert.equal(check.contextCache.size, 0, 'an empty result must not be remembered')
+
+  // The uncached gather still works and returns a string.
+  assert.equal(typeof (await real({}, '/tmp')), 'string')
+  check.contextCache.clear()
+}
+
 console.log('Composer context, ownership, hard deadlines, late-result rejection and per-call low-reasoning checks passed')

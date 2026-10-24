@@ -298,6 +298,31 @@ async function gitStatus(subprocess, cwd) {
   }
 }
 
+const CONTEXT_CACHE_MS = 2000
+const contextCache = new Map()
+
+/**
+ * Workspace context for a prediction, memoised briefly per directory.
+ *
+ * Auto mode gathers this after every finished turn, and on a large repository the
+ * bounded `git status` dominates the prepare phase. A short window collapses the
+ * repeats without hiding a change for long; a failed gather is never cached so a
+ * transient error is retried next time.
+ */
+async function cachedWorkspaceContext(providers, cwd, maxFiles = 8, now = Date.now()) {
+  if (typeof cwd !== 'string' || cwd === '') return ''
+  const key = `${cwd}\u0000${maxFiles}`
+  const hit = contextCache.get(key)
+  if (hit !== undefined && now - hit.at < CONTEXT_CACHE_MS) return hit.value
+  const value = await workspaceContext(providers, cwd, maxFiles)
+  // Only remember a real result: '' also means "no fs service", which may differ
+  // between calls once the host finishes wiring providers.
+  if (value !== '') contextCache.set(key, { at: now, value })
+  else contextCache.delete(key)
+  if (contextCache.size > 32) for (const oldest of contextCache.keys()) { contextCache.delete(oldest); if (contextCache.size <= 16) break }
+  return value
+}
+
 async function workspaceContext(providers, cwd, maxFiles = 8) {
   const fs = providers?.fs
   if (fs === undefined || typeof cwd !== 'string' || cwd === '') return ''
@@ -695,7 +720,7 @@ export function apply(ctx) {
           timing.enter('prepare')
           const context = await abortable(async () => {
             try {
-              return await workspaceContext(
+              return await cachedWorkspaceContext(
                 { fs: scoped.get('fs'), subprocess: scoped.get('subprocess') },
                 scoped.get('workingDirectory')?.get(session))
             } catch { return '' }
@@ -731,4 +756,4 @@ export function apply(ctx) {
 }
 
 /** Internals the self-check exercises directly; not part of the plugin contract. */
-export const __test = { createTiming, parseCandidates, statsOf, learnHint, workspaceContext, gitStatus, readSettings, writeSettings, withSettings, transcript, sourceOf, SYSTEM, buildPrompt, abortable, generate, runAuxiliary, runningCalls, predictingIn, DEFAULTS }
+export const __test = { createTiming, parseCandidates, statsOf, learnHint, workspaceContext, cachedWorkspaceContext, contextCache, gitStatus, readSettings, writeSettings, withSettings, transcript, sourceOf, SYSTEM, buildPrompt, abortable, generate, runAuxiliary, runningCalls, predictingIn, DEFAULTS }
