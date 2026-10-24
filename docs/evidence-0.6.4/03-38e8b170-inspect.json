@@ -1,0 +1,1304 @@
+[
+  {
+    "description" : "",
+    "role" : "AXWindow",
+    "title" : "查找 ZCode 的 work 相关模块 — DeepSeek Harness",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "查找 ZCode 的 work 相关模块 — DeepSeek Harness",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXWebArea",
+    "title" : "查找 ZCode 的 work 相关模块 — DeepSeek Harness",
+    "value" : ""
+  },
+  {
+    "description" : "收起侧边栏",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "新建会话",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "全局面板",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "工作区"
+  },
+  {
+    "description" : "视图选项",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "添加工作区",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "远程访问",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "插件",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "插件市场",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "自动化任务",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "上下文洞察",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "技能中心",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "搜索会话",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "会话",
+    "role" : "AXOutline",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "账号菜单",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "会话层级",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "用 访达 打开",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "更多打开方式",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "更多操作",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "打开右侧边栏",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生团队真实验收（0.4.1）",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "dsh插件",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "读取交接继续最终验收 39分钟 已置顶",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "进行中 读取交接文档继续最终验收 20分钟",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "进行中 研究 pi 项目代码仓库 12分钟",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "1 个子智能体运行中 查看 Ruflo 项目仓库 20分钟",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "小程序",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "htdocs",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "你好 20小时",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "你好问候 20小时",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "OZON",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "查找 ZCode 的 work 相关模块"
+  },
+  {
+    "description" : "智能体团队",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "创造模式"
+  },
+  {
+    "description" : "12 个子智能体",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "17 个后台任务",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRadioButton",
+    "title" : "对话",
+    "value" : "0"
+  },
+  {
+    "description" : "",
+    "role" : "AXRadioButton",
+    "title" : "轨迹",
+    "value" : "0"
+  },
+  {
+    "description" : "",
+    "role" : "AXRadioButton",
+    "title" : "上下文",
+    "value" : "0"
+  },
+  {
+    "description" : "",
+    "role" : "AXRadioButton",
+    "title" : "工作流",
+    "value" : "1"
+  },
+  {
+    "description" : "",
+    "role" : "AXRadioButton",
+    "title" : "编队",
+    "value" : "0"
+  },
+  {
+    "description" : "流程图",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "32 轮 977 步 · 141 tok\/s",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "235M tok · 缓存命中 93%",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "上下文已用 60%",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "dsh插件"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "读取交接继续最终验收"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "39分钟"
+  },
+  {
+    "description" : "已置顶",
+    "role" : "AXImage",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "进行中"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "读取交接文档继续最终验收"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "20分钟"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "进行中"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "研究 pi 项目代码仓库"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "12分钟"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "1 个子智能体运行中"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "查看 Ruflo 项目仓库"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "20分钟"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "小程序"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "htdocs"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "你好"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "20小时"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "你好问候"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "20小时"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "OZON"
+  },
+  {
+    "description" : "",
+    "role" : "AXHeading",
+    "title" : "原生团队真实验收（0.4.1）",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已停止"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "子代理"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成\/已创建步骤"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Tokens"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "渐进报告"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "产物"
+  },
+  {
+    "description" : "工作流",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "流程图类型",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "画布缩放",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "选择节点查看详情；使用滚动条浏览画布",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原实例: 99f021aa-ec9d-464c-b09c-9de1aba698e2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已暂停的目标"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "完成用户批准的原签名DSH主区域ZCode图形工作台重设计，保留真实数据\/全部功能\/权限与人工门禁\/恢复，不新增侧栏、环境或付费验收运行。用户授权额外只收敛留白与连线，任务22\/23已交付并正常回归通过；0.6.2在用户指定\/Users\/Admin\/dsh插件新规范目录构建\/完整自检\/签名检查通过，已applied。正规gitworktreemove的2569文件\/HEAD\/未提交状态一致，旧路径只留指向新根的宿主兼容链接，无第二份源。目录改变导致原9记录被cwd隔离过滤，已只读验证仍在原范围；用户明确确认迁移本父会话9条目录归属：先backup+副本验证，再精确单事务更新cwd，保留ID\/owner\/日志\/结果\/效果等全部其他数据，不重跑。完成正式回读9条、设计\/路径\/验收记录和本轮真实或人工视觉确认，未验项如实保留。"
+  },
+  {
+    "description" : "恢复目标",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "编辑目标",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "清除目标",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "预测输入框"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "怎么归档？归档后这个会话的记录还会保留吗？\n那就先归档吧，别删。\n归档后新项目那边还能读到这 9 条历史记录吗？"
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "Tab 接受",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "忽略",
+    "value" : ""
+  },
+  {
+    "description" : "添加文件或调用指令",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "访问模式，当前：完全权限",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "重新预测输入框",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "润色提示词",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "Codex 剩余: 90%",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "发送消息",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "32 轮 977 步"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "141 tok\/s"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "235M tok"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "缓存命中 93%"
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "OZON采集",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "已完成 图生图中心问题排查 12分钟",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "查找 ZCode 的 work 相关模块 2小时",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "Codex 输入框预测插件可行性 44分钟",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "创建任务的实时监控 1天",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXRow",
+    "title" : "排除 tuoxieHeise 后仍出现 1天",
+    "value" : ""
+  },
+  {
+    "description" : "选择运行或已保存流程",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : "原生团队真实验收（0.4.1） · 已停止 · 38e8b170"
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "新建",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "编辑脚本",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "保存流程",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "确认并运行",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生团队真实验收（0.4.1）"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "38e8b170"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0\/2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "271"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0"
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "流程图",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "阶段进度",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "节点与日志",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "结果与产物",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "依赖图",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "执行顺序",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "控制流",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "阶段交接",
+    "value" : ""
+  },
+  {
+    "description" : "缩小流程图",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "画布缩放",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "放大流程图",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "适应窗口",
+    "value" : ""
+  },
+  {
+    "description" : "原始大小",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "依赖图",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "8 节点 · 15 连接"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "选择节点查看详情；使用滚动条浏览画布"
+  },
+  {
+    "description" : "发消息或创建任务, \/ 调用指令, @ 文件或对话",
+    "role" : "AXTextArea",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Codex 剩余"
+  },
+  {
+    "description" : "选择模型，当前 6.1 Sol，推理等级 medium",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "OZON采集"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "图生图中心问题排查"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "12分钟"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "查找 ZCode 的 work 相关模块"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "2小时"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Codex 输入框预测插件可行性"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "44分钟"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "创建任务的实时监控"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "1天"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "排除 tuoxieHeise 后仍出现"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "1天"
+  },
+  {
+    "description" : "",
+    "role" : "AXMenuItem",
+    "title" : "",
+    "value" : "原生团队真实验收（0.4.1） · 已停止 · 38e8b170"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "实时连接"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "100%"
+  },
+  {
+    "description" : "并行固定结果",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "安全停止恢复门",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生队友消息",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#1 → join#1",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#2 → join#1",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "join#1 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#1 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#2 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "hole#2e7382bd → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#3 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#4 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#1 → ask#3",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#2 → ask#4",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#1",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#2",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → hole#2e7382bd",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#3",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#4",
+    "value" : ""
+  },
+  {
+    "description" : "输入 · source",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "汇合 · join#1",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收甲 · 已停止 · ask#1 · Call submit_result with {\"value\":{\"value\":7}}. Do nothing else.",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收乙 · 已停止 · ask#2 · Call submit_result with {\"value\":{\"value\":9}}. Do nothing else.",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "恢复许可 · 待执行 · hole#2e7382bd",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收甲 · 待执行 · ask#3",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收乙 · 待执行 · ask#4",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "输出 · sink",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "90%"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收甲"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已停止"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收乙"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已停止"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "恢复"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "恢复许可"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "待执行"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收甲"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "待执行"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收乙"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "待执行"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "并行固定结果"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "2 任务"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "安全停止恢复门"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "1 任务"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生队友消息"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "2 任务"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "输入"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "汇合"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Call submit_result with {\"value\":{\"value\":7}}. Do nothing else."
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Call submit_result with {\"value\":{\"value\":9}}. Do nothing else."
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "hole"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "hole#2e7382bd"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#3"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#4"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "输出"
+  }
+]

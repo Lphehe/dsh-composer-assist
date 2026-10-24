@@ -1,0 +1,1004 @@
+[
+  {
+    "description" : "原生团队最终验收：随机消息与任务状态",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "编辑与运行",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "流程图",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXHeading",
+    "title" : "原生团队最终验收：随机消息与任务状态",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "子代理"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成\/已创建步骤"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Tokens"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "渐进报告"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "产物"
+  },
+  {
+    "description" : "工作流",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXHeading",
+    "title" : "编辑与运行",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "收起脚本",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "载入示例",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "API 说明",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "分析流程",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "保存流程",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "确认并运行",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "修改后续跑",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "流程图类型",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "画布缩放",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "选择节点查看详情；使用滚动条浏览画布",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "选择运行或已保存流程",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : "原生团队最终验收：随机消息与任务状态 · 已完成 · 8ebeb50c"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "新建",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "收起脚本",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "保存流程",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生团队最终验收：随机消息与任务状态"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "8ebeb50c"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "5\/5"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "205,176"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0"
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "流程图",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "阶段进度",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "节点与日志",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "结果与产物",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "编辑与运行"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "工作流名称"
+  },
+  {
+    "description" : "",
+    "role" : "AXTextField",
+    "title" : "工作流名称",
+    "value" : "原生团队最终验收：随机消息与任务状态"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "TypeScript 脚本"
+  },
+  {
+    "description" : "",
+    "role" : "AXTextArea",
+    "title" : "TypeScript 脚本",
+    "value" : "interface Value { value: number }\ninterface Ready { ready: boolean }\ninterface Sent { sent: boolean }\ninterface Receipt { message: string; completedTaskIds: string[]; inProgressTaskIds: string[] }\nconst a = agent(\"原生验收甲\", { system: \"仅执行内部协作协议验收。禁止读写文件、运行命令、访问外网、创建代理或修改团队任务。允许 list_agents、team_task_list、send_message；每次 ask 必须使用 submit_result 返回要求的 JSON。\" });\nconst b = agent(\"原生验收乙\", { system: \"仅执行内部协作协议验收。禁止读写文件、运行命令、访问外网、创建代理或修改团队任务。每次 ask 必须使用 submit_result 返回要求的 JSON。\" });\nphase(\"并行固定结果\");\nconst initial = await Promise.all([\n  a.ask<Value>('Call submit_result with {\"value\":{\"value\":7}}. Do nothing else.'),\n  b.ask<Value>('Call submit_result with {\"value\":{\"value\":9}}. Do nothing else.')\n]);\nreport({ initial });\nphase(\"修订消息验收\");\nconst ready = await b.ask<Ready>('Call submit_result with {\"value\":{\"ready\":true}}. You are ready for the later engine-admitted receipt ask. Do nothing else.');\nconst nonce = \"TEAM_NONCE_00baefee-c52f-4802-8dd9-0191795f3a3a\";\nconst sent = await a.ask<Sent>('Call list_agents. Use send_message to teammate actor-2e37b7cfca7f66bf472164fc with message text equal to this JSON string: \"' + nonce + '\". Do not include quote characters. Only after a successful send, call submit_result with {\"value\":{\"sent\":true}}. Never create or update tasks.');\nconst receipt = await b.ask<Receipt>('From your received team messages, extract only the most recent token beginning TEAM_NONCE_ (without the Team message from envelope or punctuation); this prompt does not contain its value. If absent return message:\"\" rather than guessing. Call team_task_list and return the actual task IDs with status completed and in_progress in completedTaskIds and inProgressTaskIds. Use submit_result with value {message:the extracted token,completedTaskIds:[...],inProgressTaskIds:[...]}. Do not modify tasks.');\nif (!sent.sent || receipt.message !== nonce) throw new Error(\"Native message nonce did not match\");\nif (receipt.completedTaskIds.length < 2 || receipt.inProgressTaskIds.length !== 1) throw new Error(\"Native task projection was not authoritative\");\nreturn { initial, ready, matched: true, nonce, receipt };"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "执行模型"
+  },
+  {
+    "description" : "",
+    "role" : "AXPopUpButton",
+    "title" : "执行模型",
+    "value" : "aggregate\/glm-5-3-flash"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "参数（JSON 对象）"
+  },
+  {
+    "description" : "",
+    "role" : "AXTextArea",
+    "title" : "参数（JSON 对象）",
+    "value" : "{}"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "并发任务"
+  },
+  {
+    "description" : "",
+    "role" : "AXIncrementor",
+    "title" : "并发任务",
+    "value" : "2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "保存位置"
+  },
+  {
+    "description" : "",
+    "role" : "AXPopUpButton",
+    "title" : "保存位置",
+    "value" : "当前项目"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "分析通过，请确认脚本和流程图后运行。"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "运行会调用真实子 Agent，并使用当前会话的工具权限与模型额度。"
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "依赖图",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "执行顺序",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "控制流",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "阶段交接",
+    "value" : ""
+  },
+  {
+    "description" : "缩小流程图",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "画布缩放",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "放大流程图",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "适应窗口",
+    "value" : ""
+  },
+  {
+    "description" : "原始大小",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "依赖图",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "8 节点 · 16 连接"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "选择节点查看详情；使用滚动条浏览画布"
+  },
+  {
+    "description" : "",
+    "role" : "AXMenuItem",
+    "title" : "",
+    "value" : "原生团队最终验收：随机消息与任务状态 · 已完成 · 8ebeb50c"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "实时连接"
+  },
+  {
+    "description" : "",
+    "role" : "AXMenuItem",
+    "title" : "",
+    "value" : "aggregate\/glm-5-3-flash"
+  },
+  {
+    "description" : "",
+    "role" : "AXMenuItem",
+    "title" : "",
+    "value" : "当前项目"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "100%"
+  },
+  {
+    "description" : "并行固定结果",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "修订消息验收",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#1 → join#1",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#2 → join#1",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "join#1 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#1 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#2 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#3 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#5 → sink",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#1 → ask#4",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#2 → ask#3",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#2 → ask#5",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "ask#3 → ask#5",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#1",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#2",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#3",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#4",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXImage",
+    "title" : "source → ask#5",
+    "value" : ""
+  },
+  {
+    "description" : "输入 · source",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "汇合 · join#1",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收甲 · 已完成 · ask#1 · Call submit_result with {\"value\":{\"value\":7}}. Do nothing else.",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收乙 · 已完成 · ask#2 · Call submit_result with {\"value\":{\"value\":9}}. Do nothing else.",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收乙 · 已完成 · ask#3 · Call submit_result with {\"value\":{\"ready\":true}}. You are ready for the later engine-admitted receipt ask. Do nothing else.",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收甲 · 已完成 · ask#4 · Call list_agents. Use send_message to teammate actor-2e37b7cfca7f66bf472164fc with message text equal to this JSON string: \"TEAM_NONCE_00baefee-c52f-4802-8dd9-0191795f3a3a\". Do not include quote characters. Only after a successful send, cal",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "原生验收乙 · 已完成 · ask#5 · From your received team messages, extract only the most recent token beginning TEAM_NONCE_ (without the Team message from envelope or punctuation); this prompt does not contain its value. If absent return message:\"\" rather than guessing. Ca",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "输出 · sink",
+    "role" : "AXButton",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收甲"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收乙"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收乙"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收甲"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "A2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生验收乙"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "并行固定结果"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "2 任务"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "修订消息验收"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "3 任务"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "输入"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "汇合"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Call submit_result with {\"value\":{\"value\":7}}. Do nothing else."
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Call submit_result with {\"value\":{\"value\":9}}. Do nothing else."
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Call submit_result with {\"value\":{\"ready\":true}}. You are ready for the later engine-admitted receipt ask. Do nothing else."
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#3"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Call list_agents. Use send_message to teammate actor-2e37b7cfca7f66bf472164fc with message text equal to this JSON string: \"TEAM_NONCE_00baefee-c52f-4802-8dd9-0191795f3a3a\". Do not include quote characters. Only after a successful send, cal"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#4"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "From your received team messages, extract only the most recent token beginning TEAM_NONCE_ (without the Team message from envelope or punctuation); this prompt does not contain its value. If absent return message:\"\" rather than guessing. Ca"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "ask#5"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "输出"
+  }
+]

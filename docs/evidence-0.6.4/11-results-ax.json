@@ -1,0 +1,308 @@
+[
+  {
+    "description" : "原生团队最终验收：随机消息与任务状态",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXHeading",
+    "title" : "原生团队最终验收：随机消息与任务状态",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "子代理"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "已完成\/已创建步骤"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "Tokens"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "渐进报告"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : " "
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "产物"
+  },
+  {
+    "description" : "工作流",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXHeading",
+    "title" : "最终结果",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXHeading",
+    "title" : "渐进报告",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "选择运行或已保存流程",
+    "role" : "AXPopUpButton",
+    "title" : "",
+    "value" : "原生团队最终验收：随机消息与任务状态 · 已完成 · 8ebeb50c"
+  },
+  {
+    "description" : "",
+    "role" : "AXGroup",
+    "title" : "",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "新建",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "编辑脚本",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "保存流程",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXButton",
+    "title" : "确认并运行",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "原生团队最终验收：随机消息与任务状态"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "8ebeb50c"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "2"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "5\/5"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "205,176"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "1"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "0"
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "流程图",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "阶段进度",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "节点与日志",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXCheckBox",
+    "title" : "结果与产物",
+    "value" : ""
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "最终结果"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "{\n  \"initial\": [\n    {\n      \"value\": 7\n    },\n    {\n      \"value\": 9\n    }\n  ],\n  \"ready\": {\n    \"ready\": true\n  },\n  \"matched\": true,\n  \"nonce\": \"TEAM_NONCE_00baefee-c52f-4802-8dd9-0191795f3a3a\",\n  \"receipt\": {\n    \"completedTaskIds\": [\n      \"task-1\",\n      \"task-2\",\n      \"task-3\",\n      \"task-4\"\n    ],\n    \"inProgressTaskIds\": [\n      \"task-5\"\n    ],\n    \"message\": \"TEAM_NONCE_00baefee-c52f-4802-8dd9-0191795f3a3a\"\n  }\n}"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "渐进报告"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "[\n  {\n    \"instance\": {\n      \"siteId\": \"report#1\",\n      \"ordinal\": 1\n    },\n    \"item\": {\n      \"initial\": [\n        {\n          \"value\": 7\n        },\n        {\n          \"value\": 9\n        }\n      ]\n    }\n  }\n]"
+  },
+  {
+    "description" : "",
+    "role" : "AXMenuItem",
+    "title" : "",
+    "value" : "原生团队最终验收：随机消息与任务状态 · 已完成 · 8ebeb50c"
+  },
+  {
+    "description" : "",
+    "role" : "AXStaticText",
+    "title" : "",
+    "value" : "实时连接"
+  }
+]

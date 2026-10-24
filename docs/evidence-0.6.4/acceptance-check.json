@@ -1,0 +1,202 @@
+{
+  "testedAt": "2026-10-23T22:20:39.047Z",
+  "application": "Original signed DeepSeek Harness",
+  "pid": 13673,
+  "windowId": 74349,
+  "viewport": {
+    "width": 2056,
+    "height": 1210
+  },
+  "method": "Native macOS AX controls, guarded CGEvent input and window screenshots",
+  "stoppedNodes": [
+    {
+      "run": "b8a13eba",
+      "site": "ask#1",
+      "display": "已停止",
+      "evidence": "02-b8a13eba-ax.json"
+    },
+    {
+      "run": "b8a13eba",
+      "site": "ask#2",
+      "display": "已停止",
+      "evidence": "02-b8a13eba-ax.json"
+    },
+    {
+      "run": "38e8b170",
+      "site": "ask#1",
+      "display": "已停止",
+      "evidence": "03-38e8b170-ax.json"
+    },
+    {
+      "run": "38e8b170",
+      "site": "ask#2",
+      "display": "已停止",
+      "evidence": "03-38e8b170-ax.json"
+    },
+    {
+      "run": "99f021aa",
+      "site": "ask#2",
+      "display": "已停止",
+      "evidence": "04-99f021aa-ax.json"
+    }
+  ],
+  "graphs": [
+    {
+      "label": "依赖图",
+      "nodes": 8,
+      "edges": 16
+    },
+    {
+      "label": "执行顺序",
+      "nodes": 5,
+      "edges": 6
+    },
+    {
+      "label": "控制流",
+      "nodes": 10,
+      "edges": 9
+    },
+    {
+      "label": "阶段交接",
+      "nodes": 4,
+      "edges": 2
+    }
+  ],
+  "history": {
+    "runs": {
+      "rows": 9,
+      "sha256": "7f483ac71ebe7d23a399ab31b3b2a06ad52fdfca0334b8703c6f606dd7e49448",
+      "unchanged": true
+    },
+    "actors": {
+      "rows": 13,
+      "sha256": "e9ca18f096a4a7165e77629d78e6f01595b0b9cd437fa0328bdf596c8d06dc5e",
+      "unchanged": true
+    },
+    "nodes": {
+      "rows": 33,
+      "sha256": "04c1adc93c9af25df4211c0cc4b95ec0633373092ed80bc9724247ab01510a02",
+      "unchanged": true
+    },
+    "events": {
+      "rows": 207,
+      "sha256": "349a0b56986ddf86987326f1fea6c2fcf3b592b739b417dc8c48917d2b6106a7",
+      "unchanged": true
+    },
+    "documents": {
+      "rows": 76,
+      "sha256": "c5d1278644b6e53b25d3f48084c6423cf1d4d0ec3c1a6b86087bf1a92ecec816",
+      "unchanged": true
+    },
+    "effects": {
+      "rows": 4,
+      "sha256": "27eab38427436f9f2fc761247a2716b04375afb5c0eff73ef6d5144415149c48",
+      "unchanged": true
+    },
+    "artifacts": {
+      "rows": 2,
+      "sha256": "46d4011df693723185e58778060ff919f9296f263bf84db56ed5bce86ca3790b",
+      "unchanged": true
+    }
+  },
+  "screenshots": [
+    {
+      "file": "02-b8a13eba.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "acd08242135b7102e22dba602c1fb973e05a2d0f5de0ba7c96d6ece7ab50fdba"
+    },
+    {
+      "file": "03-38e8b170.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "f0a60ec647a5897cb7dc25436ec1de8bebf80c2ea298abcd9dc455682b07e684"
+    },
+    {
+      "file": "04-99f021aa.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "98f252692014e29058bb521fd0ce87e9c4fab1a87425e0c9748c14d2fe15424c"
+    },
+    {
+      "file": "05-completed-graph.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "e62a578d67cab0b4a887c333678b560d63ae363f21aab4ca22a60b6679caeba7"
+    },
+    {
+      "file": "06-completed-graph.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "e1f5aeb30eb90e2058af9ed3c72c492436f8352ff649e3a23f7878a512a1a804"
+    },
+    {
+      "file": "07-completed-graph.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "827f58b4905d9f121e937b24e6f021ef1062f349ac6bea72fc0c9180e18dd03a"
+    },
+    {
+      "file": "08-completed-graph.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "bf81b40abcb7d7d2d7bce7806212d0bab55acee7c8a180f68e1a50b67cb1516c"
+    },
+    {
+      "file": "09-phase-progress.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "ede4a9ff03b6e92e2842ffc147926eb89c812c9b8484915514b38951e99cb722"
+    },
+    {
+      "file": "10-nodes-and-log.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "33e1c5010f699f54ebd059dc8cfd6b3a64723db7c5ff36f70a69e0f670831548"
+    },
+    {
+      "file": "11-results.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "4bdc3363c4d734bce205ea04e65e88b5c2883e1bcfa5be472e3ff5dcf9fc608b"
+    },
+    {
+      "file": "12-zoom.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "999bfc45ee17a544c52f4982ce4cc051aaf9140431631beaacf381f0257abc44"
+    },
+    {
+      "file": "13-script-editor.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "bd6ec0dd377aecd39f041a23999b87baa2835ab631732396ddf5883cc6638f76"
+    },
+    {
+      "file": "14-node-detail.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "debf1968664fc751d03bfff6238020de69e1bad5776ae03a9314c5863b963b0b"
+    },
+    {
+      "file": "15-restored-b8a13eba.png",
+      "width": 4112,
+      "height": 2420,
+      "sha256": "308660d66670bc6cb9eff28355a3e5ea3e26c8b290f98fc9d596d7cbbf8a2023"
+    }
+  ],
+  "uiRestored": true,
+  "paidWorkflowStarted": false,
+  "newCodeChanges": false,
+  "notExercised": [
+    "launch",
+    "stop",
+    "resume",
+    "amend",
+    "save",
+    "model calls",
+    "mobile",
+    "dark mode",
+    "full-host restart recovery"
+  ]
+}
