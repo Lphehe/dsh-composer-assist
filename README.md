@@ -35,32 +35,43 @@ Tab accepts a suggestion (fills the draft, does not send); Esc hides it; the dis
 
 ## 安装 · Install
 
+已发布到 npm，直接装即可（当前版本 **0.7.0**）：
+
 ```bash
-git clone https://github.com/lphehe-bot/dsh-composer-assist.git ~/.dsh/local/composer-assist
+dsh plugin --profile desktop add dsh-composer-assist@0.7.0
 ```
 
-首次从源码安装请先构建（需要 Node.js 22.13+）：
+或在 DSH 的「插件」页安装 `dsh-composer-assist`，再在插件列表里启用。
+
+Install from npm (current version **0.7.0**):
 
 ```bash
-cd ~/.dsh/local/composer-assist
+dsh plugin --profile desktop add dsh-composer-assist@0.7.0
+```
+
+Or install `dsh-composer-assist` from the DSH Plugins page and enable it in the plugin list.
+
+### 从源码安装（开发者）
+
+```bash
+git clone https://github.com/lphehe-bot/dsh-composer-assist.git
+cd dsh-composer-assist
 pnpm install --frozen-lockfile
 pnpm run build
 pnpm run selfcheck
 ```
 
-再用 `plugin_manager` 把该目录作为 bundle 安装：
-Then install the directory as a bundle with `plugin_manager`:
+再让 DSH 以目录方式加载该 bundle：
 
 ```
-plugin_manager install_bundle  target: ~/.dsh/local/composer-assist
+plugin_manager install_bundle  target: <克隆目录的绝对路径>
 ```
 
-仓库声明了 `dsh.bundle` manifest，因此也可以直接：
-The repo declares a `dsh.bundle` manifest, so it also works directly:
+本地已链接的开发目录不要再装第二份，DSH 一次只应加载一处。
 
-```
-dsh plugin add lphehe-bot/dsh-composer-assist
-```
+### From source (developers)
+
+Clone, run `pnpm install --frozen-lockfile`, `pnpm run build` and `pnpm run selfcheck`, then load the directory as a bundle with `plugin_manager install_bundle`. Do not keep both a linked development directory and an npm copy active at once.
 
 ## 设置 · Settings
 
