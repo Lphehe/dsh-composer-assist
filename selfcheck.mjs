@@ -404,12 +404,19 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
 // leftover candidate reads like an answer to the message just sent.
 {
   const src = readFileSync(new URL('./client.js', import.meta.url), 'utf8')
-  assert(src.includes('const started = running === true && wasRunning.current !== true'),
-    'the send transition must be detected')
+  // The send signal is the draft emptying after having text. `session.running` is
+  // step-level and flips mid-answer, so using it cleared the strip repeatedly (flicker)
+  // and re-adopted results the send was meant to discard.
+  assert(src.includes("const sent = previous.trim() !== '' && draft === ''"),
+    'sending must be detected from the draft transition')
   assert(src.includes("clear('send')"), 'sending must clear the suggestion')
-  const clearAt = src.indexOf('const clear = (via) =>')
-  const effectAt = src.indexOf('// Sending a message must retire the suggestion.')
-  assert(clearAt > 0 && effectAt > clearAt, 'clear must be defined before the send effect')
+  assert(src.includes('ignoredUntil.set(sessionId, Date.now())'),
+    'sending must mute the pending Host suggestion')
+  assert(src.includes('const since = ignoredUntil.get(sessionId) ?? 0'),
+    'adoption must honour the mute')
+  assert(src.includes('seen.auto.at <= since'), 'a result produced before the send must be skipped')
+  assert(!src.includes('const started = running === true'),
+    'the step-level running flag must not drive the clear')
 }
 
 // A session the user is not looking at must still get its prediction, and the browser
@@ -424,6 +431,14 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
   assert(src.includes("reportProbe({ phase: 'adopt-host'"), 'the client must adopt the Host result')
   assert(!src.includes("void ask('next', '', 'turn-end', claimed.source)"),
     'the client must not fire a second paid prediction for the same boundary')
+}
+
+// Subagent conversations must not trigger a prediction: the strip only exists for a
+// top-level session, so a child prediction is a wasted model call nothing can show.
+{
+  const host = readFileSync(new URL('./index.js', import.meta.url), 'utf8')
+  assert(host.includes("header?.origin === 'subagent'"), 'subagent sessions must be skipped')
+  assert(host.includes('agent.session?.id ?? agent.id'), 'the session id must tolerate both shapes')
 }
 
 // Every component the JSX tree renders must exist. Deleting one while a registration

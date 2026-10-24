@@ -699,18 +699,26 @@ export function apply(ctx) {
       }
     }
 
+    // Record one finished turn per session. `agent.session.id` is the live session id;
+    // the TypeScript Agent interface only declares `id`, but the runtime object carries
+    // the session (this listener worked against it before).
     scoped.effect(() => scoped.on('agent/turn-stopping', ({ agent, turn }) => {
-      const sessionId = String(agent.session.id)
-      // Our own auxiliary call runs inside this session; if a boundary arrives while
-      // it is in flight, that boundary belongs to the prediction, not to the user's
-      // answer. Recording it would make the prediction trigger itself forever.
+      const sessionId = String(agent.session?.id ?? agent.id)
+      // Subagents run the same loop; a suggestion for a child conversation is noise, and
+      // the strip only ever exists for a top-level session.
+      // SessionHeader carries `origin: 'subagent'` for delegated conversations. The
+      // suggestion strip only exists for a top-level session, so predicting for a child
+      // spends a model call nothing can display.
+      const header = scoped.sessions.get(sessionId)?.header
+      if (header?.origin === 'subagent') return
+      void trace({ phase: 'boundary', sessionId, turn,
+        predicting: (predictingIn.get(sessionId) ?? 0) > 0,
+        delivered: deliveredTurns.get(sessionId) ?? -1 })
+      // Our own auxiliary call runs inside this session; a boundary arriving while it is
+      // in flight belongs to the prediction, not to the user's answer.
       if ((predictingIn.get(sessionId) ?? 0) > 0) return
-      // One finished answer can only ever produce one prediction, even if the
-      // browser polls again or retries after a consume.
       if ((deliveredTurns.get(sessionId) ?? -1) >= turn) return
       finishedTurns.set(sessionId, turn)
-      // Predict here rather than waiting for a browser poll: this listener is the only
-      // place that sees a session the user is not currently looking at.
       void predictInBackground(sessionId)
     }), 'composer-assist: turn boundaries')
 
@@ -731,6 +739,10 @@ export function apply(ctx) {
         // Ship the Host-generated suggestion with the boundary: the browser no longer
         // has to run its own prediction for a session it is not showing.
         const auto = autoSuggestions.get(sessionId) ?? null
+        // Read-once: the entry is cleared when handed over, so a polling client cannot
+        // adopt the same suggestion again every heartbeat and re-render the strip on a
+        // timer (that periodic repaint is the flicker).
+        if (auto !== null) autoSuggestions.delete(sessionId)
         return json(200, { ok: true, turn, auto, source: session === undefined ? null : sourceOf(session) })
       },
     }), 'composer-assist: turn route')

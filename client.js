@@ -257,6 +257,9 @@ window.__ModuleLoader__.load({
     }
 
     const timingBySession = new Map()
+    // Sessions whose pending Host suggestion must not be adopted: the user sent a message,
+    // so the suggestion produced for the previous turn is stale by definition.
+    const ignoredUntil = new Map()
     /**
      * Response shapes are checked field by field. Treating "the body is an object" as
      * enough is what turned a missing route, a moved revision and a real answer into the
@@ -1048,16 +1051,21 @@ window.__ModuleLoader__.load({
         }
       }
 
-      // Sending a message must retire the suggestion. The session starts running the
-      // moment the user submits, so that transition is the signal: the old candidates
-      // described a conversation state the user has already moved past, and leaving them
-      // on screen made it look like a reply to the message just sent.
-      const wasRunning = useRef(running)
+      // Sending retires the suggestion. The reliable signal is the draft emptying after
+      // having text, not `session.running`: that flag is step-level and flips between
+      // steps of one answer, so clearing on it made the strip blink and re-adopt results
+      // that the send was supposed to discard.
+      const lastDraft = useRef(draft)
       useEffect(() => {
-        const started = running === true && wasRunning.current !== true
-        wasRunning.current = running
-        if (started && (pending !== null || pendingBySession.has(sessionId))) clear('send')
-      }, [running])
+        const previous = lastDraft.current
+        lastDraft.current = draft
+        const sent = previous.trim() !== '' && draft === ''
+        if (!sent) return
+        // Drop what is stored and ignore whatever the Host produced for the turn the
+        // user just abandoned.
+        clear('send')
+        ignoredUntil.set(sessionId, Date.now())
+      }, [draft])
 
       // Auto prediction: exactly one request per finished turn.
       //
@@ -1080,7 +1088,13 @@ window.__ModuleLoader__.load({
             // The Host already generated this one, including for sessions the user was not
             // looking at. Adopt it instead of asking a second time: one billable call per
             // finished turn, whichever conversation it belongs to.
-            if (seen.auto !== null && seen.auto !== undefined && suggestionBySession.get(sessionId) === undefined) {
+            // A suggestion produced before the user's send describes a turn they already
+            // moved past, so it must not be adopted on a later poll.
+            const since = ignoredUntil.get(sessionId) ?? 0
+            const muted = seen.auto !== null && seen.auto !== undefined
+              && typeof seen.auto.at === 'number' && seen.auto.at <= since
+            if (seen.auto !== null && seen.auto !== undefined && !muted
+              && suggestionBySession.get(sessionId) === undefined) {
               if (seen.turn !== null && seen.turn !== undefined) {
                 void fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`)
               }
@@ -1112,6 +1126,8 @@ window.__ModuleLoader__.load({
             if (blank || draftRef.current !== '') return
           } catch { /* a missed poll just means no prediction for that turn */ }
         }
+        // Poll once immediately: a host suggestion produced while the user was away must
+        // appear the moment this session is shown, not after up to five seconds.
         void poll()
         const timers = []
         // Never start a second prediction for the same session while one is running:
@@ -1281,11 +1297,10 @@ window.__ModuleLoader__.load({
       }, [enabled, draft, sessionId])
 
       const inline = settings?.display === 'inline'
-      // The session is answering: whatever is still stored belongs to the previous
-      // exchange. Hiding it during render (not in an effect) is what stops the bar from
-      // painting for one frame and disappearing — the flash the user saw on send.
-      const sending = running === true
-      const continuation = !sending && pending?.kind === 'complete' && pending.draftAt === draft && draft !== ''
+      // `session.running` is a STEP-level flag: it flips false between steps of one
+      // answer, so hiding the bar on it made the strip disappear and reappear on every
+      // step — the flicker. Sending is a one-shot event, handled by the effect below.
+      const continuation = pending?.kind === 'complete' && pending.draftAt === draft && draft !== ''
       const ghost = enabled && pending !== null
         && ((pending.kind === 'next' && draft === '') || continuation)
         ? currentCandidate(sessionId) : ''
@@ -1309,9 +1324,6 @@ window.__ModuleLoader__.load({
         enabled, inline, hasPending: pending !== null, busy, failed,
         willRender: enabled && (pending !== null || busy || failed) })
       if (!enabled) return null
-      // Rendering stops here while the session answers, so no frame ever shows a stale
-      // suggestion after a send. The effect below still clears the stored state.
-      if (sending) return null
       // Inline mode keeps only a thin affordance row; the text itself is in the composer.
       if (inline && pending === null && !busy && !failed) return null
       if (!inline && pending === null && !busy && !failed) return null

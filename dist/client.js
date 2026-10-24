@@ -1,5 +1,5 @@
 (() => {
-  // composer-workflow-client.js
+  // composer-assist-client.js
   window.__ModuleLoader__.load({
     id: "dsh-composer-assist",
     factory(require2) {
@@ -266,6 +266,7 @@
         }
       }
       const timingBySession = /* @__PURE__ */ new Map();
+      const ignoredUntil = /* @__PURE__ */ new Map();
       class ResponseShapeError extends Error {
       }
       async function readJsonResponse(response, what) {
@@ -911,12 +912,15 @@
             for (const listener of listeners) listener();
           }
         };
-        const wasRunning = useRef(running);
+        const lastDraft = useRef(draft);
         useEffect(() => {
-          const started = running === true && wasRunning.current !== true;
-          wasRunning.current = running;
-          if (started && (pending !== null || pendingBySession.has(sessionId))) clear("send");
-        }, [running]);
+          const previous = lastDraft.current;
+          lastDraft.current = draft;
+          const sent = previous.trim() !== "" && draft === "";
+          if (!sent) return;
+          clear("send");
+          ignoredUntil.set(sessionId, Date.now());
+        }, [draft]);
         useEffect(() => {
           if (!enabled || mode !== "auto" && mode !== "both") return void 0;
           let stopped = false;
@@ -925,7 +929,9 @@
             try {
               const peek = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`);
               const seen = await readJsonResponse(peek, "turn");
-              if (seen.auto !== null && seen.auto !== void 0 && suggestionBySession.get(sessionId) === void 0) {
+              const since = ignoredUntil.get(sessionId) ?? 0;
+              const muted = seen.auto !== null && seen.auto !== void 0 && typeof seen.auto.at === "number" && seen.auto.at <= since;
+              if (seen.auto !== null && seen.auto !== void 0 && !muted && suggestionBySession.get(sessionId) === void 0) {
                 if (seen.turn !== null && seen.turn !== void 0) {
                   void fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`);
                 }
@@ -1082,8 +1088,7 @@
           setPending(saved);
         }, [enabled, draft, sessionId]);
         const inline = settings?.display === "inline";
-        const sending = running === true;
-        const continuation = !sending && pending?.kind === "complete" && pending.draftAt === draft && draft !== "";
+        const continuation = pending?.kind === "complete" && pending.draftAt === draft && draft !== "";
         const ghost = enabled && pending !== null && (pending.kind === "next" && draft === "" || continuation) ? currentCandidate(sessionId) : "";
         useEffect(() => {
           if (!inline) {
@@ -1112,7 +1117,6 @@
           willRender: enabled && (pending !== null || busy || failed)
         });
         if (!enabled) return null;
-        if (sending) return null;
         if (inline && pending === null && !busy && !failed) return null;
         if (!inline && pending === null && !busy && !failed) return null;
         const badge = busy ? t("strip.thinking") : failed ? t("strip.failed") : t(pending?.kind === "complete" ? "strip.complete" : "strip.next");
