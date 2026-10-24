@@ -1296,6 +1296,14 @@ async function createWorkflowManager(ctx, options = {}) {
       const existing = journal.getRun(meta.id);
       const blocked = existing ? holds(meta.id) : [];
       if (blocked.length) fail("\u5B58\u5728\u7ED3\u679C\u672A\u77E5\u7684\u526F\u4F5C\u7528\uFF0C\u8BF7\u5148\u9009\u62E9\u660E\u786E\u91CD\u8BD5\u6216\u63A5\u7EB3\u8282\u70B9\u7ED3\u679C", "WorkflowRecoveryHeld");
+      if (existing) {
+        for (const node of journal.listNodes(meta.id, { kinds: ["world-run"], withResult: false })) {
+          if (node.status !== "running") continue;
+          const effect = journal.getEffect(`${meta.id}:world:${refToString3(node)}`);
+          if (effect?.state === "settled" && effect.value !== void 0) journal.putNode({ ...node, status: "completed", result: effect.value });
+          else if (effect?.state === "settled" && effect.error) journal.putNode({ ...node, status: "failed", error: { code: "WorldCommandFailed", message: effect.error } });
+        }
+      }
       const source = resumedFrom ?? existing?.resumedFrom;
       const predecessor = source ? journal.getRun(source) : void 0;
       const controller = new AbortController();
@@ -1303,6 +1311,39 @@ async function createWorkflowManager(ctx, options = {}) {
       active.set(meta.id, running2);
       const ownJournal = Object.create(journal);
       ownJournal.createRun = (row) => journal.createRun({ ...row, cwd: meta.cwd });
+      let pendingSettle = null;
+      const flushSettle = () => {
+        if (pendingSettle) {
+          journal.putNode(pendingSettle);
+          pendingSettle = null;
+        }
+      };
+      ownJournal.putNode = (record2) => {
+        const settled = record2.status === "completed" || record2.status === "failed";
+        if (!settled) {
+          flushSettle();
+          journal.putNode(record2);
+          return;
+        }
+        flushSettle();
+        pendingSettle = record2;
+      };
+      ownJournal.appendEvent = (runId, event) => {
+        if (!pendingSettle || event.type !== "node-settled") {
+          flushSettle();
+          return journal.appendEvent(runId, event);
+        }
+        const node = pendingSettle;
+        pendingSettle = null;
+        return journal.transaction(() => {
+          journal.putNode(node);
+          return journal.appendEvent(runId, event);
+        });
+      };
+      for (const key of ["getNode", "listNodes", "countNodes", "siteStates"]) ownJournal[key] = (...args) => {
+        flushSettle();
+        return journal[key](...args);
+      };
       const usedWorldNodes = /* @__PURE__ */ new Set();
       const recordEffect = (op, args) => {
         const hash = inputHash({ op, args });
@@ -1312,6 +1353,8 @@ async function createWorkflowManager(ctx, options = {}) {
         usedWorldNodes.add(refToString3(node));
         const previous = journal.getEffect(id);
         if (previous?.resolution === "accept") return previous;
+        if (previous?.state === "settled" && previous.value !== void 0) return { ...previous, resolution: "accept" };
+        if (previous?.state === "settled" && previous.error) fail(previous.error, "WorldCommandFailed");
         if (previous && previous.state !== "settled" && previous.resolution !== "retry") fail("\u4E16\u754C\u547D\u4EE4\u7ED3\u679C\u672A\u77E5\uFF0C\u5FC5\u987B\u5148\u4EBA\u5DE5\u786E\u8BA4", "WorkflowRecoveryHeld");
         const value = { id, runId: meta.id, nodeId: refToString3(node), instance: { siteId: node.siteId, ordinal: node.ordinal }, kind: "world-run", op, args, state: "pending", startedAt: Date.now() };
         journal.putEffect(value);

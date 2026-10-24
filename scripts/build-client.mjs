@@ -26,4 +26,4 @@ await build({
   entryPoints: [resolve(root, 'workflow/host/compiler-worker.js')], bundle: true, format: 'esm', platform: 'node', target: 'node22',
   external: ['@zcode/dynamic-workflow'], outfile: resolve(root, 'dist/compiler-worker.js'), legalComments: 'eof',
 })
-console.log('Built composer prediction, dynamic workflow Client, versioned Host and compiler worker.')
+console.log('Built composer prediction, dynamic workflow Client, Host bundle and compiler worker.')

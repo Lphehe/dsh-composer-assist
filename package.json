@@ -23,7 +23,7 @@
   "exports": {
     ".": "./index.js",
     "./client": "./dist/client.js",
-    "./workflow": "./dist/workflow-host-0.6.4.js",
+    "./workflow": "./dist/workflow-host.js",
     "./workflow/locale/*.json": "./workflow/locale/*.json",
     "./workflow/icon": "./icon.svg",
     "./locale/*.json": "./locale/*.json",
@@ -36,7 +36,7 @@
     "client.js",
     "dist/client.js",
     "dist/compiler-worker.js",
-    "dist/workflow-host-0.6.4.js",
+    "dist/workflow-host.js",
     "workflow",
     "vendor/zcode",
     "scripts",
