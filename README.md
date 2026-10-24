@@ -26,13 +26,6 @@
 按 **Tab** 接受建议（填进草稿但不发送），**Esc** 隐藏，「忽略」按钮则永久丢弃。草稿为空时 **←/→** 在候选之间切换（按住修饰键、或输入法正在组合时不会拦截方向键）。
 Tab accepts a suggestion (fills the draft, does not send); Esc hides it; the dismiss button forgets it. With an empty draft, **←/→** cycles between candidates (arrows are left alone while a modifier is held or an IME is composing).
 
-## 本机开发目录
-
-
-规范目录为 `/Users/Admin/dsh插件`，原开发工作树已通过 `git worktree move` 迁至此处，不是另复制一份。Git 历史仍关联原 Composer 仓库，暂未拆成独立仓库；不要删除其主仓库的 Git 元数据。原桌面通过本地 bundle 链接加载这里，运行数据库仍留在原私有数据目录。经用户确认，仅将本父会话9条记录的目录归属更新到新根，ID、日志和结果不变。旧开发路径保留为指向本目录的兼容链接，解决当前宿主仍解析旧绝对路径的缓存；它不是第二份源码，确认宿主冷启动后可独立核查是否仍需保留，当前不要删除。
-
-本机开发、构建和 `plugin_manager install_bundle` 均使用此目录。以下 clone 示例仅供新机器首次安装，本机不要据此再建第二份。
-
 ## 安装 · Install
 
 已发布到 npm，直接装即可（当前版本 **0.7.3**）：
@@ -143,8 +136,8 @@ Inline rendering relies on the host's composer markers and native hint styles, w
 
 ## 自检 · Self-check
 
-克隆仓库后运行 `node selfcheck.mjs`，检查解析、学习统计和上下文失败降级；不调用模型或改写用户设置。
-After cloning, run `node selfcheck.mjs` for parser, learning-counter and context-fallback checks. It does not call a model or change user settings.
+克隆仓库后运行 `pnpm run selfcheck`：它检查解析、学习统计、上下文失败降级，并确认提交的 `dist/` 与当前源码一致；不调用模型或改写用户设置。
+After cloning, run `pnpm run selfcheck`: it covers parsing, learning counters and context fallback, and verifies the committed `dist/` matches the current source. It does not call a model or change user settings.
 
 ## 许可证 · License
 
