@@ -136,6 +136,18 @@ export async function createWorkflowManager(ctx, options = {}) {
     const existing = journal.getRun(meta.id)
     const blocked = existing ? holds(meta.id) : []
     if (blocked.length) fail('存在结果未知的副作用，请先选择明确重试或接纳节点结果', 'WorkflowRecoveryHeld')
+    // Settle the crash window: a world-run row stays `running` until the engine
+    // reports completion, so a crash right after the effect was recorded leaves a
+    // command that already ran looking unstarted. Re-derive `completed` from the
+    // recorded effect before the engine can re-dispatch it.
+    if (existing) {
+      for (const node of journal.listNodes(meta.id, { kinds: ['world-run'], withResult: false })) {
+        if (node.status !== 'running') continue
+        const effect = journal.getEffect(`${meta.id}:world:${refToString(node)}`)
+        if (effect?.state === 'settled' && effect.value !== undefined) journal.putNode({ ...node, status: 'completed', result: effect.value })
+        else if (effect?.state === 'settled' && effect.error) journal.putNode({ ...node, status: 'failed', error: { code: 'WorldCommandFailed', message: effect.error } })
+      }
+    }
     const source = resumedFrom ?? existing?.resumedFrom
     const predecessor = source ? journal.getRun(source) : undefined
     const controller = new AbortController()
@@ -152,6 +164,11 @@ export async function createWorkflowManager(ctx, options = {}) {
       usedWorldNodes.add(refToString(node))
       const previous = journal.getEffect(id)
       if (previous?.resolution === 'accept') return previous
+      // A settled command already ran. Reuse its recorded outcome instead of
+      // dispatching again: the node row only reaches completed after this, so a
+      // crash in between would otherwise look like "not started" on resume.
+      if (previous?.state === 'settled' && previous.value !== undefined) return { ...previous, resolution: 'accept' }
+      if (previous?.state === 'settled' && previous.error) fail(previous.error, 'WorldCommandFailed')
       if (previous && previous.state !== 'settled' && previous.resolution !== 'retry') fail('世界命令结果未知，必须先人工确认', 'WorkflowRecoveryHeld')
       const value = { id, runId: meta.id, nodeId: refToString(node), instance: { siteId: node.siteId, ordinal: node.ordinal }, kind: 'world-run', op, args, state: 'pending', startedAt: Date.now() }
       journal.putEffect(value)
