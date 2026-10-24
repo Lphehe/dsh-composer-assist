@@ -1,0 +1,5 @@
+# pnpm 11 blocks dependency build scripts by default and fails the install with
+# ERR_PNPM_IGNORED_BUILDS. esbuild needs its postinstall to place the platform
+# binary, so approve exactly that one package instead of disabling the guard.
+allowBuilds:
+  esbuild: true
