@@ -155,6 +155,31 @@ export async function createWorkflowManager(ctx, options = {}) {
     active.set(meta.id, running)
     const ownJournal = Object.create(journal)
     ownJournal.createRun = row => journal.createRun({ ...row, cwd: meta.cwd })
+    // The engine settles a node and records its event as two separate writes.
+    // A crash between them leaves a completed node with no node-settled event,
+    // which loses the replay ordering evidence (see replay-order). Coalesce that
+    // one pair into a single transaction: putNode arms it, the next appendEvent
+    // commits the pair.
+    let pendingSettle = null
+    const flushSettle = () => { if (pendingSettle) { journal.putNode(pendingSettle); pendingSettle = null } }
+    ownJournal.putNode = record => {
+      const settled = record.status === 'completed' || record.status === 'failed'
+      if (!settled) { flushSettle(); journal.putNode(record); return }
+      flushSettle()
+      pendingSettle = record
+    }
+    ownJournal.appendEvent = (runId, event) => {
+      // Only a node-settled event belongs to the same settlement as the held
+      // row; anything else means the pair never formed, so write it first.
+      if (!pendingSettle || event.type !== 'node-settled') { flushSettle(); return journal.appendEvent(runId, event) }
+      const node = pendingSettle
+      pendingSettle = null
+      return journal.transaction(() => {
+        journal.putNode(node)
+        return journal.appendEvent(runId, event)
+      })
+    }
+    for (const key of ['getNode', 'listNodes', 'countNodes', 'siteStates']) ownJournal[key] = (...args) => { flushSettle(); return journal[key](...args) }
     const usedWorldNodes = new Set()
     const recordEffect = (op, args) => {
       const hash = inputHash({ op, args })
