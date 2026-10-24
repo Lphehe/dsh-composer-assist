@@ -784,6 +784,13 @@ export function apply(ctx) {
             probes.push(report)
             if (probes.length > 40) probes.shift()
             lastProbe = report
+            // Persist the client's own decisions: without this the trail only ever shows
+            // Host activity, which is why a browser-side flicker had no evidence at all.
+            if (['result', 'not-owned', 'empty-result', 'click-miss', 'clear', 'adopt-host', 'restore'].includes(report?.phase)) {
+              void trace({ phase: `client:${report.phase}`, sessionId: report.sessionId, via: report.via,
+                stale: report.stale, idMoved: report.idMoved, draftMoved: report.draftMoved,
+                textLength: report.textLength, count: report.count, instanceId: report.instanceId })
+            }
           } catch { /* keep the previous report */ }
           return json(200, { ok: true })
         }

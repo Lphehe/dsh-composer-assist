@@ -912,15 +912,16 @@
             for (const listener of listeners) listener();
           }
         };
-        const lastDraft = useRef(draft);
+        const lastDraft = useRef({ sessionId, draft });
         useEffect(() => {
           const previous = lastDraft.current;
-          lastDraft.current = draft;
-          const sent = previous.trim() !== "" && draft === "";
+          lastDraft.current = { sessionId, draft };
+          const sameSession = previous.sessionId === sessionId;
+          const sent = sameSession && previous.draft.trim() !== "" && draft === "";
           if (!sent) return;
           clear("send");
           ignoredUntil.set(sessionId, Date.now());
-        }, [draft]);
+        }, [draft, sessionId]);
         useEffect(() => {
           if (!enabled || mode !== "auto" && mode !== "both") return void 0;
           let stopped = false;

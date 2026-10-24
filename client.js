@@ -1055,17 +1055,22 @@ window.__ModuleLoader__.load({
       // having text, not `session.running`: that flag is step-level and flips between
       // steps of one answer, so clearing on it made the strip blink and re-adopt results
       // that the send was supposed to discard.
-      const lastDraft = useRef(draft)
+      // The previous draft is remembered per session. A single ref survived a session
+      // switch, so arriving at an empty draft looked like "the user just sent" and the
+      // strip cleared itself — the flicker only ever appeared in other conversations.
+      const lastDraft = useRef({ sessionId, draft })
       useEffect(() => {
         const previous = lastDraft.current
-        lastDraft.current = draft
-        const sent = previous.trim() !== '' && draft === ''
+        lastDraft.current = { sessionId, draft }
+        // A switch is not a send: compare only within the same session.
+        const sameSession = previous.sessionId === sessionId
+        const sent = sameSession && previous.draft.trim() !== '' && draft === ''
         if (!sent) return
         // Drop what is stored and ignore whatever the Host produced for the turn the
         // user just abandoned.
         clear('send')
         ignoredUntil.set(sessionId, Date.now())
-      }, [draft])
+      }, [draft, sessionId])
 
       // Auto prediction: exactly one request per finished turn.
       //

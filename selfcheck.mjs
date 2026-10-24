@@ -407,8 +407,10 @@ for (const change of ['edit', 'session', 'phase', 'unmount', 'none']) {
   // The send signal is the draft emptying after having text. `session.running` is
   // step-level and flips mid-answer, so using it cleared the strip repeatedly (flicker)
   // and re-adopted results the send was meant to discard.
-  assert(src.includes("const sent = previous.trim() !== '' && draft === ''"),
-    'sending must be detected from the draft transition')
+  assert(src.includes('const sameSession = previous.sessionId === sessionId'),
+    'a session switch must not look like a send')
+  assert(src.includes("const sent = sameSession && previous.draft.trim() !== '' && draft === ''"),
+    'sending must be detected from the draft transition within one session')
   assert(src.includes("clear('send')"), 'sending must clear the suggestion')
   assert(src.includes('ignoredUntil.set(sessionId, Date.now())'),
     'sending must mute the pending Host suggestion')
