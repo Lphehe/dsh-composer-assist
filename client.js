@@ -19,7 +19,10 @@ window.__ModuleLoader__.load({
       'strip.complete': '补全草稿',
       'strip.accept': 'Tab 接受',
       'strip.acceptHint': 'Tab 接受（←/→ 切换候选）',
+      'strip.preview': '预览 · 未填入草稿',
+      'strip.cycle': '←/→ 切换候选',
       'strip.dismiss': '忽略',
+      'strip.draftChanged': '草稿已变化，请重新预测',
       'strip.confidence': '置信度',
       'strip.confidenceHigh': '较高',
       'strip.confidenceMedium': '中等',
@@ -27,8 +30,10 @@ window.__ModuleLoader__.load({
       'strip.thinking': '正在生成…',
       'strip.failed': '生成失败',
       'predict.again': '重新预测输入框',
+      'predict.short': '预测',
       'predict.title': '预测输入框',
       'predict.busy': '预测中…',
+      'polish.short': '润色',
       'polish.title': '润色提示词',
       'polish.busy': '润色中…',
       'polish.failed': '润色失败',
@@ -74,7 +79,10 @@ window.__ModuleLoader__.load({
       'strip.complete': 'Draft continuation',
       'strip.accept': 'Tab to accept',
       'strip.acceptHint': 'Tab to accept (←/→ to cycle)',
+      'strip.preview': 'Preview · not inserted',
+      'strip.cycle': '←/→ switch candidates',
       'strip.dismiss': 'Dismiss',
+      'strip.draftChanged': 'Draft changed; predict again',
       'strip.confidence': 'confidence',
       'strip.confidenceHigh': 'high',
       'strip.confidenceMedium': 'medium',
@@ -82,8 +90,10 @@ window.__ModuleLoader__.load({
       'strip.thinking': 'Generating…',
       'strip.failed': 'Generation failed',
       'predict.again': 'Predict input again',
+      'predict.short': 'Predict',
       'predict.title': 'Predict input',
       'predict.busy': 'Predicting…',
+      'polish.short': 'Polish',
       'polish.title': 'Polish prompt',
       'polish.busy': 'Polishing…',
       'polish.failed': 'Polish failed',
@@ -124,6 +134,23 @@ window.__ModuleLoader__.load({
       'settings.noModels': 'No models are available; configure one under Models first.',
       'settings.catalogFailed': 'Could not read the model catalog: ',
     }
+
+    Object.assign(zh, {
+      'timing.queue': '排队', 'timing.prepare': '准备', 'timing.model': '模型', 'timing.validate': '校验',
+      'timing.waiting': '等待服务端阶段数据', 'timing.total': '总耗时', 'timing.elapsed': '已等待',
+      'timing.complete': '已完成', 'timing.timeout': '超时', 'timing.failed': '请求失败',
+      'timing.stale-source': '结果已过期', 'timing.low-confidence': '低于置信度门槛',
+      'timing.empty-transcript': '缺少对话上下文', 'timing.empty-input': '草稿为空', 'timing.model-empty': '无候选结果',
+      'timing.note': '排队=等待上一调用退出；准备=上下文与模型准备；模型含供应商及网络等待；校验含响应解析和来源核对。分段不含全部传输/页面开销；—表示未取得数据。仅当前页面内存保留最近8个会话的最新请求统计，不记录正文。',
+    })
+    Object.assign(en, {
+      'timing.queue': 'Queue', 'timing.prepare': 'Prepare', 'timing.model': 'Model', 'timing.validate': 'Validate',
+      'timing.waiting': 'Waiting for server timing', 'timing.total': 'Total', 'timing.elapsed': 'Elapsed',
+      'timing.complete': 'Complete', 'timing.timeout': 'Timed out', 'timing.failed': 'Request failed',
+      'timing.stale-source': 'Stale result', 'timing.low-confidence': 'Below confidence threshold',
+      'timing.empty-transcript': 'No conversation context', 'timing.empty-input': 'Empty draft', 'timing.model-empty': 'No candidate',
+      'timing.note': 'Queue waits for an earlier call; prepare includes context and model preparation; model includes provider/network wait; validation includes response parsing and source checks. Segments exclude some transport/page overhead; — means unavailable. Only the latest request for 8 sessions is retained in page memory; no prompt text.',
+    })
 
     /** Shared settings snapshot so both the strip and the settings rows agree. */
     const settingsStore = {
@@ -166,29 +193,85 @@ window.__ModuleLoader__.load({
       return body
     }
 
-    async function request(kind, sessionId, draft) {
-      const response = await fetch(`${API}/suggest`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ kind, sessionId, draft }),
-      })
-      const body = await response.json()
-      if (body?.ok !== true) throw new Error(body?.error ?? 'failed')
-      const text = typeof body.text === 'string' ? body.text : ''
-      // Surface the Host's own explanation; an empty string alone cannot be acted on.
-      if (text === '' && body.reason !== undefined) {
-        reportProbe({ phase: 'empty-result', reason: body.reason, transcriptChars: body.transcriptChars })
-        // A brand-new or empty session has nothing to predict from. That is not a
-        // failure, so surface it as a quiet "no suggestion", not a silent no-op.
-        return { text: '', candidates: [], confidence: null, reason: body.reason }
+    async function withTimeout(work, milliseconds) {
+      const abort = new AbortController()
+      let timer
+      try {
+        return await Promise.race([
+          new Promise((_, reject) => {
+            timer = setTimeout(() => {
+              const error = new DOMException('Suggestion timed out', 'TimeoutError')
+              abort.abort(error)
+              reject(error)
+            }, milliseconds)
+          }),
+          work(abort.signal),
+        ])
+      } finally { clearTimeout(timer) }
+    }
+
+    const timingBySession = new Map()
+
+    async function request(kind, sessionId, draft, revision, source) {
+      const configured = settingsStore.value?.timeoutMs
+      const deadline = Number.isFinite(configured) ? Math.max(2000, Math.min(120000, configured)) : 20000
+      const id = currentRequestId(sessionId)
+      const timing = { kind, started: performance.now(), pending: true, stage: 'waiting', host: null }
+      timingBySession.delete(sessionId)
+      timingBySession.set(sessionId, timing)
+      while (timingBySession.size > 8) timingBySession.delete(timingBySession.keys().next().value)
+      notifyStore()
+      try {
+        const result = await withTimeout(async (signal) => {
+          const response = await fetch(`${API}/suggest`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ kind, sessionId, draft, revision, source }),
+            signal,
+          })
+          signal.throwIfAborted()
+          timing.stage = 'validate'
+          timing.receivedAt = performance.now()
+          if (timingBySession.get(sessionId) === timing) notifyStore()
+          const body = await response.json()
+          signal.throwIfAborted()
+          const owned = body?.sessionId === sessionId && body.revision === revision && typeof body.source === 'string'
+          const phases = ['queue', 'prepare', 'model', 'validate']
+          if (owned && phases.includes(body.timing?.phase)
+            && phases.every(key => Number.isFinite(body.timing[key]) && body.timing[key] >= 0)) {
+            timing.host = { phase: body.timing.phase, ...Object.fromEntries(phases.map(key => [key, body.timing[key]])) }
+          }
+          if (body?.ok !== true) throw new Error(body?.error ?? 'failed')
+          if (!owned) return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
+          const text = typeof body.text === 'string' ? body.text : ''
+          if (text === '' && body.reason !== undefined) {
+            reportProbe({ phase: 'empty-result', reason: body.reason, transcriptChars: body.transcriptChars })
+            return { text: '', candidates: [], confidence: null, reason: body.reason }
+          }
+          if (text !== '' && !await sourceMatches(sessionId, body.source)) {
+            return { text: '', candidates: [], confidence: null, reason: 'stale-source' }
+          }
+          signal.throwIfAborted()
+          const candidates = Array.isArray(body.candidates)
+            ? body.candidates.filter(item => typeof item === 'string' && item.trim() !== '').slice(0, 3)
+            : []
+          if (candidates.length === 0 && text !== '') candidates.push(text)
+          const confidence = Number.isFinite(body.confidence) && body.confidence >= 0 && body.confidence <= 1 ? body.confidence : null
+          return { text: candidates[0] ?? '', candidates, confidence, source: body.source }
+        }, deadline + 1000)
+        timing.status = id !== currentRequestId(sessionId) || draftBySession.get(sessionId)?.revision !== revision
+          ? 'stale-source' : ['timeout', 'stale-source', 'low-confidence', 'empty-transcript', 'empty-input', 'model-empty'].includes(result.reason)
+            ? result.reason : result.text === '' ? 'model-empty' : 'complete'
+        return result
+      } catch (error) {
+        timing.status = error?.name === 'TimeoutError' ? 'timeout' : 'failed'
+        throw error
+      } finally {
+        timing.pending = false
+        timing.total = performance.now() - timing.started
+        timing.clientValidation = timing.receivedAt === undefined ? 0 : performance.now() - timing.receivedAt
+        if (timingBySession.get(sessionId) === timing) notifyStore()
       }
-      // `next` returns a candidate list; the other kinds return a single text.
-      const candidates = Array.isArray(body.candidates)
-        ? body.candidates.filter(item => typeof item === 'string' && item.trim() !== '').slice(0, 3)
-        : []
-      if (candidates.length === 0 && text !== '') candidates.push(text)
-      const confidence = Number.isFinite(body.confidence) && body.confidence >= 0 && body.confidence <= 1 ? body.confidence : null
-      return { text: candidates[0] ?? '', candidates, confidence }
     }
 
     /**
@@ -207,21 +290,8 @@ window.__ModuleLoader__.load({
       } catch { /* feedback is advisory, never fatal */ return undefined }
     }
 
-    /**
-     * Paint the suggestion as trailing ghost text inside the composer.
-     *
-     * Why not the host's `--dsh-composer-hint`: that rule lives on
-     * `.input p:last-child::after`, and the host's own placeholder is an
-     * absolutely-positioned sibling (`.placeholder`, inset 4/8/auto/14) that is
-     * shown exactly while `draft === ''` — the very moment a prediction appears.
-     * It paints after the editor, so it covers the ghost completely. A hint on an
-     * empty draft can therefore never be visible.
-     *
-     * Instead this plugin owns one absolutely-positioned span inside the same
-     * relatively-positioned `.grow` wrapper. It is behind nothing, adds no editable
-     * node, and the draft text never contains it. The caret line's height and the
-     * left inset are mirrored from the host's own `.input` padding.
-     */
+    // Empty editors need a separate preview: their managed line break pushes the
+    // native ::after hint onto a second line. Draft continuations use native flow.
     const GHOST_CLASS = 'composer-assist-ghost'
     const GHOST_STYLE_ID = 'composer-assist-ghost-style'
 
@@ -232,23 +302,27 @@ window.__ModuleLoader__.load({
       style.id = GHOST_STYLE_ID
       style.textContent = `
 .${GHOST_CLASS} {
-  position: absolute;
-  left: 14px;
-  right: 8px;
-  top: 4px;
+  grid-area: 1 / 1;
+  min-width: 0;
+  margin: 4px 8px 4px 14px;
   pointer-events: none;
   user-select: none;
   white-space: pre-wrap;
   word-break: break-word;
   overflow-wrap: anywhere;
-  color: var(--dsw-alias-label-caption);
-  opacity: 0.75;
+  color: var(--dsw-alias-label-secondary);
+}
+[data-composer-input][data-composer-assist-continuation] p:last-child::after {
+  color: var(--dsw-alias-label-secondary);
+  opacity: 1;
 }
 .${GHOST_CLASS}[hidden] { display: none; }
 /* The host's own placeholder occupies the same line and inset; showing both
    stacks two sentences on one baseline. While a ghost is visible it stands in
    for the placeholder. */
-.grow:has(> .${GHOST_CLASS}:not([hidden])) [data-composer-placeholder] { display: none; }
+[data-composer-card] :has(> .${GHOST_CLASS}:not([hidden])) { display: grid; }
+[data-composer-card] :has(> .${GHOST_CLASS}:not([hidden])) > [data-composer-input] { grid-area: 1 / 1; }
+[data-composer-card] :has(> .${GHOST_CLASS}:not([hidden])) > [data-composer-placeholder] { display: none; }
 `
       document.head.appendChild(style)
     }
@@ -261,7 +335,7 @@ window.__ModuleLoader__.load({
         ?? undefined
     }
 
-    /** The element whose absolutely-positioned children sit over the editor. */
+    /** The wrapper shared by the editor, placeholder, and empty-draft preview. */
     function ghostHostFor(element) {
       const grow = element?.parentElement
       return grow === null || grow === undefined ? undefined : grow
@@ -282,15 +356,27 @@ window.__ModuleLoader__.load({
       return span
     }
 
-    /** Show, update, or hide the ghost. An empty string hides it without removing it. */
-    function paintGhost(element, text) {
-      const span = element === undefined ? undefined : ghostSpanFor(element)
-      if (span === undefined || span === null) return
-      if (text === '') {
-        span.hidden = true
-        span.textContent = ''
+    const ownedHints = new Map()
+
+    /** Empty drafts use an overlay; continuations use the editor's own text flow. */
+    function paintGhost(element, text, continuation = false) {
+      clearGhosts()
+      if (element === undefined || text === '') return
+      const existing = getComputedStyle(element).getPropertyValue('--dsh-composer-hint').trim()
+      if (existing !== '' && existing !== '""') return
+      if (continuation) {
+        const value = `"${CSS.escape(text)}"`
+        ownedHints.set(element, {
+          value,
+          previous: element.style.getPropertyValue('--dsh-composer-hint'),
+          priority: element.style.getPropertyPriority('--dsh-composer-hint'),
+        })
+        element.style.setProperty('--dsh-composer-hint', value)
+        element.setAttribute('data-composer-assist-continuation', '')
         return
       }
+      const span = ghostSpanFor(element)
+      if (span === undefined || span === null) return
       span.textContent = text
       span.hidden = false
     }
@@ -358,6 +444,14 @@ window.__ModuleLoader__.load({
     /** Hide every ghost this plugin owns (unmount, mode switch, no suggestion). */
     function clearGhosts() {
       if (typeof document === 'undefined') return
+      for (const [element, hint] of ownedHints) {
+        element.removeAttribute('data-composer-assist-continuation')
+        if (element.style.getPropertyValue('--dsh-composer-hint') === hint.value) {
+          if (hint.previous !== '') element.style.setProperty('--dsh-composer-hint', hint.previous, hint.priority)
+          else element.style.removeProperty('--dsh-composer-hint')
+        }
+      }
+      ownedHints.clear()
       for (const span of document.querySelectorAll(`.${GHOST_CLASS}`)) {
         span.hidden = true
         span.textContent = ''
@@ -367,6 +461,7 @@ window.__ModuleLoader__.load({
     /** Drop the injected stylesheet and every ghost span; called once on unload. */
     function disposeGhosts() {
       if (typeof document === 'undefined') return
+      clearGhosts()
       for (const span of document.querySelectorAll(`.${GHOST_CLASS}`)) span.remove()
       document.getElementById(GHOST_STYLE_ID)?.remove()
     }
@@ -387,22 +482,28 @@ window.__ModuleLoader__.load({
     const listeners = new Set()
 
     /** A prediction request in flight, owned by the module (not a component). */
-    function runRequest(kind, sessionId, draft, cause) {
+    function runRequest(kind, sessionId, draft, cause, source) {
+      if (kind === 'complete' && hasDraftRequest(sessionId, draft)) return Promise.resolve(null)
       const id = nextRequestId(sessionId)
+      const revision = trackDraft(sessionId, draft).revision
+      pendingBySession.set(sessionId, { id, draft, revision, bounded: true })
+      publishStore()
       reportProbe({ phase: 'begin', trace: `req-${id}`, owner: sessionId, kind, cause })
-      return request(kind, sessionId, draft).then((result) => {
-        const stale = id !== currentRequestId(sessionId)
+      return request(kind, sessionId, draft, revision, source).then((result) => {
+        const stale = id !== currentRequestId(sessionId) || draftBySession.get(sessionId)?.revision !== revision
         reportProbe({ phase: 'result', trace: `req-${id}`, kind,
           textLength: result.text.length, stale, owner: sessionId, confidence: result.confidence })
-        if (result.text === '') return null
-        // `next` carries a candidate list and a confidence; the other kinds stay single.
+        if (stale || result.text === '') return null
         const record = {
-          kind, text: result.text, draftAt: draft,
+          kind, text: result.text, draftAt: draft, source: result.source,
           candidates: result.candidates, confidence: result.confidence,
         }
-        if (!stale) rememberSuggestion(sessionId, record)
+        rememberSuggestion(sessionId, record)
         return record
-      }).catch(() => null)
+      }).catch(() => null).finally(() => {
+        if (pendingBySession.get(sessionId)?.id === id) pendingBySession.delete(sessionId)
+        publishStore()
+      })
     }
 
     /**
@@ -410,7 +511,61 @@ window.__ModuleLoader__.load({
      * a component instance: switching conversations unmounts the strip and a fresh
      * `useRef` would restart at zero, marking the pending result stale.
      */
-    const requestSeqBySession = new Map()
+    const sessionStorageKey = 'dsh.composer-assist.predictions.v2'
+    function restoreSessionState() {
+      const state = {
+        requests: new Map(), suggestions: new Map(), candidates: new Map(),
+        drafts: new Map(), pending: new Map(), listeners: new Set(),
+      }
+      try {
+        const entries = JSON.parse(sessionStorage.getItem(sessionStorageKey) ?? '[]')
+        if (!Array.isArray(entries)) return state
+        for (const entry of entries.slice(-8)) {
+          if (!Array.isArray(entry)) continue
+          const [id, record, index] = entry
+          if (typeof id !== 'string' || record === null || typeof record !== 'object'
+            || !['next', 'complete'].includes(record.kind) || typeof record.text !== 'string'
+            || record.text === '' || typeof record.draftAt !== 'string' || typeof record.source !== 'string') continue
+          const candidates = Array.isArray(record.candidates)
+            ? record.candidates.filter(text => typeof text === 'string' && text !== '').slice(0, 3) : []
+          state.suggestions.set(id, {
+            kind: record.kind, text: record.text, draftAt: record.draftAt, candidates, source: record.source,
+            confidence: Number.isFinite(record.confidence) && record.confidence >= 0 && record.confidence <= 1
+              ? record.confidence : null,
+          })
+          state.candidates.set(id, Number.isSafeInteger(index) && index >= 0
+            ? Math.min(index, Math.max(1, candidates.length) - 1) : 0)
+        }
+      } catch { /* Storage can be unavailable; retain predictions in memory. */ }
+      return state
+    }
+    const sessionStateKey = Symbol.for('dsh.composer-assist.session-state.v2')
+    const sessionState = window[sessionStateKey] ??= restoreSessionState()
+    const requestSeqBySession = sessionState.requests
+    const draftBySession = sessionState.drafts
+
+    function trackDraft(sessionId, draft) {
+      let state = draftBySession.get(sessionId)
+      if (state === undefined || state.draft !== draft) {
+        state = { draft, revision: (state?.revision ?? 0) + 1 }
+        draftBySession.set(sessionId, state)
+      }
+      return state
+    }
+
+    function hasDraftRequest(sessionId, draft) {
+      const active = pendingBySession.get(sessionId)
+      return active?.draft === draft && active.revision === draftBySession.get(sessionId)?.revision
+    }
+
+    async function sourceMatches(sessionId, source) {
+      return withTimeout(async (signal) => {
+        const response = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}`, { signal })
+        const body = await response.json()
+        signal.throwIfAborted()
+        return body.ok === true && typeof source === 'string' && body.source === source
+      }, 5000)
+    }
 
     /** Next request id for one session. */
     function nextRequestId(sessionId) {
@@ -430,23 +585,29 @@ window.__ModuleLoader__.load({
      * changes, so component state alone loses the prediction on every switch.
      * Keyed by session id and pruned to a few entries.
      */
-    const suggestionBySession = new Map()
+    const suggestionBySession = sessionState.suggestions
 
     /**
      * Which candidate of the stored suggestion is currently shown, per session.
      * Kept separate from the suggestion because switching it is a UI action that
      * must survive a conversation switch just like the suggestion itself.
      */
-    const candidateIndexBySession = new Map()
+    const candidateIndexBySession = sessionState.candidates
 
     /** Monotonic instance counter for mount/unmount tracing. */
     let instanceSeq = 0
 
     /** Sessions whose prediction is currently generating. */
-    const pendingBySession = new Set()
+    const pendingBySession = sessionState.pending
+    // Pre-deadline requests cannot keep a reloaded plugin permanently busy.
+    for (const [owner, active] of pendingBySession) {
+      if (active?.bounded === true) continue
+      nextRequestId(owner)
+      pendingBySession.delete(owner)
+    }
 
     /** Notified whenever any session's stored suggestion changes. */
-    const storeListeners = new Set()
+    const storeListeners = sessionState.listeners
 
     /** Subscribe to store changes; returns the unsubscribe. */
     function onStoreChange(listener) {
@@ -456,6 +617,15 @@ window.__ModuleLoader__.load({
 
     /** Notify every subscriber after a store mutation. */
     function publishStore() {
+      try {
+        sessionStorage.setItem(sessionStorageKey, JSON.stringify(
+          [...suggestionBySession].map(([id, record]) => [id, record, candidateIndexBySession.get(id) ?? 0]),
+        ))
+      } catch { /* Storage can be unavailable; retain predictions in memory. */ }
+      notifyStore()
+    }
+
+    function notifyStore() {
       for (const listener of [...storeListeners]) { try { listener() } catch { /* one bad subscriber */ } }
     }
 
@@ -551,6 +721,10 @@ window.__ModuleLoader__.load({
     /** One suggestion strip: renders nothing when there is nothing to offer. */
     function SuggestionStrip({ sessionId, useInput, useSession, inputActions, settings, t }) {
       const draft = useInput(state => state.draft)
+      trackDraft(sessionId, draft)
+      const phase = useInput(state => state.phase)
+      const phaseRef = useRef(phase)
+      phaseRef.current = phase
       const blank = useSession(session => session.blank)
       // Drives poll cadence only; a turn boundary comes from the Host, never from this flag.
       const running = useSession(session => session.running)
@@ -601,8 +775,22 @@ window.__ModuleLoader__.load({
         setFailed(false)
         return onStoreChange(apply)
       }, [sessionId])
-      // Typing does NOT discard a suggestion: it stays until accepted, dismissed,
-      // superseded by a newer prediction, or the session changes.
+      // Draft edits keep completed candidates, but accepting still requires the exact draft.
+      useEffect(() => {
+        if (!enabled) return undefined
+        let stopped = false
+        const verify = async () => {
+          const stored = suggestionBySession.get(sessionId)
+          if (stored === undefined) return
+          try {
+            const matches = await sourceMatches(sessionId, stored.source)
+            if (!stopped && !matches && suggestionBySession.get(sessionId) === stored) rememberSuggestion(sessionId, null)
+          } catch { /* A failed read cannot prove that a cached suggestion is stale. */ }
+        }
+        void verify()
+        const timer = setInterval(() => { void verify() }, 5000)
+        return () => { stopped = true; clearInterval(timer) }
+      }, [sessionId, enabled, running, pending?.source])
 
       /**
        * @param via - 'accept' consumes it, 'dismiss' forgets it, 'hide' only hides it.
@@ -618,25 +806,15 @@ window.__ModuleLoader__.load({
         for (const listener of listeners) listener()
       }
 
-      const ask = async (kind, at, cause) => {
+      const ask = async (kind, at, cause, source) => {
         const owner = sessionId
         reportProbe({ phase: 'request', kind, cause: cause ?? 'unknown', draft: at, owner })
-        // Session-scoped, so the generating state survives a switch.
-        pendingBySession.add(owner)
-        publishStore()
-        setBusy(true); setFailed(false)
-        // The request and its store write belong to the MODULE: a session switch may
-        // unmount this strip while the request is in flight, and the result must
-        // still land where a later mount can read it.
-        const record = await runRequest(kind, owner, at, cause)
-        pendingBySession.delete(owner)
-        publishStore()
+        setFailed(false)
+        await runRequest(kind, owner, at, cause, source)
         if (sessionIdRef.current === owner) {
-          // An empty result means "nothing this time": keep whatever the store holds
-          // for this session instead of blanking the bar or flagging a failure.
           const stored = suggestionBySession.get(owner)
           setPending(stored === undefined ? null : { ...stored })
-          setBusy(false)
+          setBusy(pendingBySession.has(owner))
           for (const listener of listeners) listener()
         }
       }
@@ -669,10 +847,8 @@ window.__ModuleLoader__.load({
             const claim = await fetch(`${API}/turn?sessionId=${encodeURIComponent(sessionId)}&consume=1`)
             const claimed = await claim.json()
             if (claimed?.turn === null || claimed?.turn === undefined) return
-            if (blank) return
-            // Issued even if this instance unmounts next tick: ask() writes to the
-            // module store, which is what a later mount reads.
-            void ask('next', '', 'turn-end')
+            if (blank || draftRef.current !== '') return
+            void ask('next', '', 'turn-end', claimed.source)
           } catch { /* a missed poll just means no prediction for that turn */ }
         }
         void poll()
@@ -693,9 +869,11 @@ window.__ModuleLoader__.load({
       // Word completion: debounce the typed draft, never repeat an accepted line.
       useEffect(() => {
         if (!enabled || (mode !== 'word' && mode !== 'both')) return
-        if (draft.trim() === '') return
-        if (pending !== null && pending.draftAt === draft) return
-        const timer = setTimeout(() => { void ask('complete', draft, 'typing') }, settings?.debounceMs ?? 600)
+        if (draft.trim() === '' || hasDraftRequest(sessionId, draft)) return
+        if (suggestionBySession.get(sessionId)?.draftAt === draft) return
+        const timer = setTimeout(() => {
+          if (draftRef.current === draft && !hasDraftRequest(sessionId, draft)) void ask('complete', draft, 'typing')
+        }, settings?.debounceMs ?? 600)
         return () => { clearTimeout(timer) }
       }, [draft, enabled, mode, sessionId, settings?.debounceMs])
 
@@ -732,21 +910,33 @@ window.__ModuleLoader__.load({
 
       // Accept/Escape from the keyboard listener.
       useEffect(() => {
-        acceptRef.current = () => {
-          if (pending === null) return false
-          // Never accept a suggestion that the store says belongs to another session.
+        let accepting = false
+        const accept = () => {
           const stored = suggestionBySession.get(sessionId)
-          if (stored === null || stored === undefined) return false
-          // Accept whatever candidate is currently shown, not necessarily the first.
+          if (pending === null || stored === undefined || stored.draftAt !== draftRef.current
+            || phaseRef.current !== 'plain' || accepting) return false
+          const revision = draftBySession.get(sessionId)?.revision
           const text = currentCandidate(sessionId)
-          if (stored.kind === 'next') inputActions.setDraft(text)
-          else if (stored.kind === 'complete') inputActions.setDraft(`${draftRef.current}${text}`)
-          else inputActions.setDraft(text)
-          void recordFeedback('accept', text)
-          clear('accept')
+          accepting = true
+          void (async () => {
+            try {
+              if (!await sourceMatches(sessionId, stored.source)) {
+                if (suggestionBySession.get(sessionId) === stored) rememberSuggestion(sessionId, null)
+                return
+              }
+              if (acceptRef.current !== accept || sessionIdRef.current !== sessionId || suggestionBySession.get(sessionId) !== stored
+                || draftBySession.get(sessionId)?.revision !== revision || draftRef.current !== stored.draftAt
+                || phaseRef.current !== 'plain') return
+              inputActions.setDraft(stored.kind === 'complete' ? `${stored.draftAt}${text}` : text)
+              void recordFeedback('accept', text)
+              clear('accept')
+            } catch { /* Never overwrite a draft when its source cannot be verified. */ }
+            finally { accepting = false }
+          })()
           return true
         }
-        return () => { acceptRef.current = undefined }
+        acceptRef.current = accept
+        return () => { if (acceptRef.current === accept) acceptRef.current = undefined }
       }, [pending, inputActions])
 
       useEffect(() => {
@@ -781,7 +971,10 @@ window.__ModuleLoader__.load({
       }, [pending])
 
       const inline = settings?.display === 'inline'
-      const ghost = !enabled || pending === null ? '' : currentCandidate(sessionId)
+      const continuation = pending?.kind === 'complete' && pending.draftAt === draft && draft !== ''
+      const ghost = enabled && pending !== null
+        && ((pending.kind === 'next' && draft === '') || continuation)
+        ? currentCandidate(sessionId) : ''
 
       // The ghost lives over the composer surface, not in this component's tree, so
       // it is reconciled on every relevant change and released on unmount.
@@ -790,10 +983,10 @@ window.__ModuleLoader__.load({
         ensureGhostStyle()
         const element = composerInputElement()
         if (element === undefined) return undefined
-        paintGhost(element, ghost)
+        paintGhost(element, ghost, continuation)
         reportProbe({ phase: 'paint', ghost })
         return undefined
-      }, [ghost, inline, sessionId])
+      }, [ghost, inline, sessionId, continuation])
       useEffect(() => () => { clearGhosts() }, [])
 
       // Record the render decision: this is the only place that can explain a bar
@@ -829,8 +1022,12 @@ window.__ModuleLoader__.load({
 
       // Standalone suggestion bar above the composer. Its own element and its own
       // line, so it can never collide with the composer placeholder.
-      return h('div', { style: stripStyle, role: 'status', 'aria-live': 'polite', 'data-composer-assist-bar': '' },
-        h('span', { style: stripBadge }, badge),
+      return h('div', { style: inline ? {
+        ...stripStyle, padding: '2px 4px', marginBottom: '4px',
+        border: 'none', borderLeft: 'none', borderRadius: 0,
+        background: 'transparent', boxShadow: 'none',
+      } : stripStyle, role: 'status', 'aria-live': 'polite', 'data-composer-assist-bar': '' },
+        h('span', { style: stripBadge }, inline && ghost !== '' ? t('strip.preview') : badge),
         confidenceText !== null && h('span', {
           style: {
             flex: '0 0 auto', fontSize: '10px', fontWeight: '600',
@@ -838,15 +1035,22 @@ window.__ModuleLoader__.load({
             paddingTop: '2px', whiteSpace: 'nowrap',
           },
         }, confidenceText),
-        h('span', { style: stripText }, pending !== null ? text : ''),
+        h('span', { style: inline && ghost !== '' ? {
+          ...stripText, position: 'absolute', width: '1px', height: '1px',
+          overflow: 'hidden', clipPath: 'inset(50%)',
+        } : stripText }, pending !== null ? text : ''),
         counter !== '' && h('span', { style: stripBadge }, counter),
+        inline && total > 1 && draft === '' && h('span', { style: stripBadge }, t('strip.cycle')),
         h('span', { style: stripActions },
           pending !== null && h('button', {
             type: 'button',
             onClick: () => { acceptRef.current?.() },
-            title: total > 1 ? t('strip.acceptHint') : t('strip.accept'),
+            disabled: pending.draftAt !== draft,
+            title: pending.draftAt !== draft ? t('strip.draftChanged')
+              : total > 1 && draft === '' ? t('strip.acceptHint') : t('strip.accept'),
             style: {
-              cursor: 'pointer', border: 'none',
+              opacity: pending.draftAt !== draft ? '0.5' : '1',
+              cursor: pending.draftAt !== draft ? 'default' : 'pointer', border: 'none',
               background: 'var(--dsw-alias-brand-primary)',
               color: 'var(--dsw-alias-bg-base)',
               borderRadius: '6px', padding: '3px 12px',
@@ -920,39 +1124,88 @@ window.__ModuleLoader__.load({
         title: label,
         'aria-label': label,
         style: {
-          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
           cursor: busy ? 'default' : 'pointer',
           border: '1px solid var(--dsw-alias-border-l1)',
           background: 'transparent',
           color: 'var(--dsw-alias-label-secondary)',
-          borderRadius: '8px', padding: '4px 10px',
-          fontSize: '12px', fontWeight: '600', lineHeight: '1.6',
+          borderRadius: '6px', padding: '2px 6px', minHeight: '24px',
+          fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
           whiteSpace: 'nowrap',
           opacity: busy ? '0.6' : '1',
         },
-      }, busy ? [h('span', { key: 'dot', 'aria-hidden': true }, '\u22ef'), h('span', { key: 'label' }, label)]
-        : [h('span', { key: 'icon', 'aria-hidden': true }, '\u2192'), h('span', { key: 'label' }, label)])
+      }, [h('span', { key: 'icon', 'aria-hidden': true }, busy ? '\u22ef' : '\u2192'),
+        h('span', { key: 'label' }, t('predict.short'))])
+    }
+
+    function RequestTiming({ sessionId, settings, t }) {
+      const [, redraw] = useState(0)
+      const timing = timingBySession.get(sessionId)
+      useEffect(() => {
+        const off = onStoreChange(() => redraw(value => value + 1))
+        redraw(value => value + 1)
+        return off
+      }, [sessionId])
+      useEffect(() => {
+        if (!settings?.enabled || !timing?.pending) return
+        const timer = setInterval(() => redraw(value => value + 1), 500)
+        return () => clearInterval(timer)
+      }, [sessionId, settings?.enabled, timing?.pending])
+      if (!settings?.enabled || timing === undefined) return null
+      const elapsed = timing.pending ? performance.now() - timing.started : timing.total
+      const validation = timing.receivedAt === undefined ? 0
+        : timing.pending ? performance.now() - timing.receivedAt : timing.clientValidation
+      const format = ms => ms === undefined ? '—' : ms < 1000 ? `${Math.round(ms)}ms` : `${(ms / 1000).toFixed(1)}s`
+      const values = ['queue', 'prepare', 'model'].map(key => `${t(`timing.${key}`)} ${format(timing.host?.[key])}`)
+      values.push(`${t('timing.validate')} ${timing.host !== null
+        ? format(timing.host.validate + validation) : timing.receivedAt === undefined ? '—' : `≥${format(validation)}`}`)
+      const stage = timing.host?.phase ?? timing.stage
+      const label = timing.pending ? timing.stage === 'waiting' ? t('timing.waiting') : `${t('timing.validate')}…`
+        : ['timeout', 'failed'].includes(timing.status)
+          ? `${t(`timing.${timing.status}`)} · ${t(`timing.${stage}`)}` : t(`timing.${timing.status}`)
+      return h('div', {
+        'data-composer-timing': true, title: t('timing.note'),
+        style: {
+          display: 'flex', flexWrap: 'wrap', gap: '4px 10px', alignItems: 'center',
+          boxSizing: stripStyle.boxSizing, width: stripStyle.width, maxWidth: stripStyle.maxWidth,
+          margin: '0 auto', padding: '2px 0 4px',
+          fontSize: '11px', lineHeight: '1.5', color: 'var(--dsw-alias-label-secondary)',
+        },
+      }, [
+        h('span', { key: 'status', role: 'status', 'aria-live': 'polite' }, `${t(timing.kind === 'polish' ? 'polish.short' : timing.kind === 'complete' ? 'strip.complete' : 'predict.short')} · ${label}`),
+        h('span', { key: 'elapsed' }, `${t(timing.pending ? 'timing.elapsed' : 'timing.total')} ${format(elapsed)}`),
+        h('span', { key: 'segments' }, values.join(' · ')),
+      ])
     }
 
     /** ✨ button in the composer tool row; rewrites the current draft into it. */
     function PolishButton({ sessionId, useInput, inputActions, t }) {
       const draft = useInput(state => state.draft)
       const phase = useInput(state => state.phase)
+      trackDraft(sessionId, draft)
+      const live = useRef({ sessionId, draft, phase })
+      live.current = { sessionId, draft, phase }
+      const mounted = useRef(true)
+      useEffect(() => { mounted.current = true; return () => { mounted.current = false } }, [])
       const [busy, setBusy] = useState(false)
       const [failed, setFailed] = useState(false)
       const idle = draft.trim() !== '' && phase === 'plain' && !busy
 
       const run = async () => {
         if (!idle) return
+        const id = nextRequestId(sessionId)
+        const revision = draftBySession.get(sessionId).revision
+        const unchanged = () => mounted.current && live.current.sessionId === sessionId
+          && live.current.draft === draft && live.current.phase === 'plain'
+          && draftBySession.get(sessionId)?.revision === revision && currentRequestId(sessionId) === id
         setBusy(true); setFailed(false)
         try {
-          // `request` answers with a record; polish only needs its text.
-          const { text } = await request('polish', sessionId, draft)
-          if (text !== '') inputActions.setDraft(text)
+          const { text } = await request('polish', sessionId, draft, revision)
+          if (text !== '' && unchanged()) inputActions.setDraft(text)
         } catch {
-          setFailed(true)
+          if (unchanged()) setFailed(true)
         } finally {
-          setBusy(false)
+          if (mounted.current) setBusy(false)
         }
       }
 
@@ -963,19 +1216,19 @@ window.__ModuleLoader__.load({
         title: failed ? t('polish.failed') : busy ? t('polish.busy') : t('polish.title'),
         'aria-label': t('polish.title'),
         style: {
-          display: 'inline-flex', alignItems: 'center', gap: '5px',
+          display: 'inline-flex', alignItems: 'center', gap: '4px',
           cursor: idle ? 'pointer' : 'default',
           // Idle is brand-tinted and readable; disabled stays visible but clearly inert.
           border: idle ? '1px solid var(--dsw-alias-brand-primary)' : '1px solid var(--dsw-alias-border-l1)',
           background: idle ? 'var(--dsw-alias-bg-layer-1)' : 'transparent',
           color: failed ? 'var(--dsw-alias-state-error-primary)'
             : idle ? 'var(--dsw-alias-brand-primary)' : 'var(--dsw-alias-label-secondary)',
-          borderRadius: '8px', padding: '4px 10px',
-          fontSize: '12px', fontWeight: '600', lineHeight: '1.6',
+          borderRadius: '6px', padding: '2px 6px', minHeight: '24px',
+          fontSize: '12px', fontWeight: '600', lineHeight: '1.5',
           whiteSpace: 'nowrap',
         },
-      }, busy ? t('polish.busy')
-        : [h('span', { key: 'icon', 'aria-hidden': true }, '✨'), h('span', { key: 'label' }, t('polish.title'))])
+      }, [h('span', { key: 'icon', 'aria-hidden': true }, busy ? '\u22ef' : '✨'),
+        h('span', { key: 'label' }, t('polish.short'))])
     }
 
     /** Full settings page in the left nav: switch, mode, model, and the numbers. */
@@ -1187,7 +1440,10 @@ window.__ModuleLoader__.load({
 
         /** Stable slot component: reads settings itself so its identity never changes. */
         function StripSlot(props) {
-          return h(SuggestionStrip, { ...props, settings: useSettings(), t })
+          const settings = useSettings()
+          return h(React.Fragment, null,
+            h(SuggestionStrip, { ...props, settings, t }),
+            h(RequestTiming, { sessionId: props.sessionId, settings, t }))
         }
 
         ctx.slots.inject('conversation.input.dock', () => ctx.slots.register({
