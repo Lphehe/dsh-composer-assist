@@ -49,3 +49,4 @@ jobs:
         run: |
           pnpm run build
           pnpm pack --dry-run
+          node scripts/preview-pack-selfcheck.mjs
