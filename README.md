@@ -1,6 +1,6 @@
 # 输入框预测 · Composer Assist
 
-> **中文**：根据当前对话和你说话的方式，在输入框上方给出你下一条最可能发的消息，按 Tab 即可采用；同时支持输入时补全草稿、一键润色提示词。
+> **Fusion 协作开发预览（PR #16）**：仅在 `feat/fusion-review-loop-20261025` 分支恢复双 Cordis 插件入口和 Fusion UI，尚未并入正式 npm 0.7.5。预览版为 `private` 包；安装之前必须从源码构建，且请使用独立测试 Profile。详情：[Fusion 预览安装与验收](docs/fusion-preview-install.md)。\n\n> **中文**：根据当前对话和你说话的方式，在输入框上方给出你下一条最可能发的消息，按 Tab 即可采用；同时支持输入时补全草稿、一键润色提示词。
 >
 > **English**: Predicts your next message in the DSH composer, based on your conversation and how you talk to it. Press Tab to take it. It also completes a draft as you type and rewrites a prompt for clarity on demand.
 
