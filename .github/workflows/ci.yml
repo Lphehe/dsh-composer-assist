@@ -36,6 +36,12 @@ jobs:
       - name: Compile Fusion with ZCode (no model calls)
         run: node workflow/host/fusion-compile-selfcheck.mjs
 
+      - name: Validate Fusion and native workflow UI
+        run: |
+          node workflow/client/selfcheck.mjs
+          node workflow/client/fusion-ui-selfcheck.mjs
+          pnpm exec esbuild workflow/client/ui.js --bundle --platform=browser --format=esm --outfile=/tmp/dsh-fusion-workflow-ui.js
+
       - name: Validate source and committed bundles
         run: pnpm run selfcheck
 
