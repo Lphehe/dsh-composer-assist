@@ -1,0 +1,49 @@
+{
+  "name": "dsh-composer-fusion",
+  "version": "0.1.0-alpha.0",
+  "private": true,
+  "description": "Experimental standalone Fusion workflows for DeepSeek Harness; isolated from composer prediction",
+  "type": "module",
+  "main": "./dist/index.js",
+  "exports": {
+    ".": "./dist/index.js",
+    "./client": "./dist/client.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "cordis.patch.yml",
+    "README.md",
+    "NOTICE.md"
+  ],
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "build": "node ../../scripts/build-fusion-addon.mjs",
+    "prepack": "node ../../scripts/build-fusion-addon.mjs",
+    "verify": "node ../../scripts/verify-fusion-addon.mjs"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-api-gateway",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-conversation",
+        "@deepseek-ai/dsh-client-ui-tool",
+        "@deepseek-ai/dsh-client-ui-slots"
+      ]
+    }
+  },
+  "license": "SEE NOTICE.md",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lphehe/dsh-composer-assist.git",
+    "directory": "packages/dsh-composer-fusion"
+  }
+}
