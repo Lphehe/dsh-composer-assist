@@ -1,7 +1,7 @@
 {
   "name": "dsh-composer-assist",
   "version": "0.7.5",
-  "description": "Context-aware composer prediction for DeepSeek Harness: predicts the next message after each turn, completes a draft while typing, and rewrites a prompt on demand; multiple searchable candidates, per-session suggestions, and supersede-safe responses.",
+  "description": "DSH composer prediction plus opt-in ZCode Fusion agent workflows (development preview).",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Lphehe/dsh-composer-assist.git"
@@ -12,20 +12,21 @@
   "homepage": "https://github.com/Lphehe/dsh-composer-assist#readme",
   "packageManager": "pnpm@11.24.0",
   "scripts": {
-    "build": "node scripts/build-client.mjs",
-    "selfcheck": "node selfcheck.mjs && node scripts/bundle-freshness-selfcheck.mjs && node workflow/host/fusion-template-selfcheck.mjs"
+    "build": "node scripts/build-workflow.mjs && node scripts/build-client.mjs",
+    "selfcheck": "node selfcheck.mjs && node workflow/host/fusion-template-selfcheck.mjs && node workflow/client/fusion-ui-selfcheck.mjs && node workflow/client/selfcheck.mjs && node workflow/host/fusion-compile-selfcheck.mjs && node workflow/host/driver-selfcheck.mjs && node workflow/host/world-selfcheck.mjs && node workflow/host/selfcheck.mjs && node workflow/host/plugin-selfcheck.mjs && node scripts/bundle-freshness-selfcheck.mjs"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@zcode/dynamic-workflow": "file:vendor/zcode/dynamic-workflow",
+    "@zcode/dynamic-workflow-runtime": "file:vendor/zcode/dynamic-workflow-runtime",
+    "typescript": "5.9.3"
+  },
   "engines": {
     "node": ">=22.13.0"
   },
   "devDependencies": {
     "@types/node": "24.12.3",
     "vitest": "4.1.5",
-    "esbuild": "^0.25.12",
-    "@zcode/dynamic-workflow": "file:vendor/zcode/dynamic-workflow",
-    "@zcode/dynamic-workflow-runtime": "file:vendor/zcode/dynamic-workflow-runtime",
-    "typescript": "5.9.3"
+    "esbuild": "^0.25.12"
   },
   "type": "module",
   "license": "SEE LICENSE IN LICENSE",
@@ -34,7 +35,10 @@
     "./client": "./dist/client.js",
     "./locale/*.json": "./locale/*.json",
     "./icon": "./icon.svg",
-    "./package.json": "./package.json"
+    "./package.json": "./package.json",
+    "./workflow": "./dist/workflow-host.js",
+    "./workflow/locale/*.json": "./workflow/locale/*.json",
+    "./workflow/icon": "./icon.svg"
   },
   "files": [
     "index.js",
@@ -43,7 +47,12 @@
     "cordis.patch.yml",
     "locale/*.json",
     "icon.svg",
-    "screenshots/*.png"
+    "screenshots/*.png",
+    "dist/compiler-worker.js",
+    "dist/workflow-host.js",
+    "workflow",
+    "vendor/zcode",
+    "scripts"
   ],
   "dsh": {
     "bundle": {
@@ -59,5 +68,11 @@
         "@deepseek-ai/dsh-client-ui-tool"
       ]
     }
-  }
+  },
+  "bundleDependencies": [
+    "@zcode/dynamic-workflow",
+    "@zcode/dynamic-workflow-runtime",
+    "typescript"
+  ],
+  "private": true
 }
