@@ -42,6 +42,11 @@ jobs:
           node workflow/client/fusion-ui-selfcheck.mjs
           pnpm exec esbuild workflow/client/ui.js --bundle --platform=browser --format=esm --outfile=/tmp/dsh-fusion-workflow-ui.js
 
+      - name: Build and verify standalone Fusion package
+        run: |
+          node scripts/build-fusion-addon.mjs
+          node scripts/verify-fusion-addon.mjs
+
       - name: Validate source and committed bundles
         run: pnpm run selfcheck
 
