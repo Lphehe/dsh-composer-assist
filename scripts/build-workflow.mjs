@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { cpSync, realpathSync } from 'node:fs'
+import { cpSync, realpathSync, rmSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -23,5 +23,10 @@ for (const name of ['dynamic-workflow', 'dynamic-workflow-runtime']) {
   run(tsc, ['-p', join(source, 'tsconfig.json')], root)
   // pnpm file: dependencies are copies; refresh their generated output for local consumers.
   const installed = realpathSync(join(root, 'node_modules/@zcode', name))
-  if (installed !== realpathSync(source)) cpSync(join(source, 'dist'), join(installed, 'dist'), { recursive: true })
+  if (installed !== realpathSync(source)) {
+    // pnpm file: deps are copies; Node 26 can reject overwriting generated
+    // declarations with ERR_FS_CP_EEXIST. Refresh only the generated dist.
+    rmSync(join(installed, 'dist'), { recursive: true, force: true })
+    cpSync(join(source, 'dist'), join(installed, 'dist'), { recursive: true })
+  }
 }
