@@ -4,6 +4,12 @@
 >
 > **English**: Predicts your next message in the DSH composer, based on your conversation and how you talk to it. Press Tab to take it. It also completes a draft as you type and rewrites a prompt for clarity on demand.
 
+## 反馈 · Feedback
+
+问题、建议或使用疑问，欢迎加入 QQ 群 **1129389677**。
+
+Bugs, suggestions and usage questions: join the QQ group **1129389677**.
+
 <p align="center">
   <img src="screenshots/composer-bar.png" alt="建议栏显示在输入框上方" width="720">
 </p>
