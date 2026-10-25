@@ -14,6 +14,7 @@ const h = React.createElement
 const button = (label, onClick, disabled, primary) => h('button', { onClick, disabled, primary }, label)
 const view = createFusionView(React, { t: key => key, button })
 const flatten = node => {
+  if (Array.isArray(node)) return node.flatMap(flatten)
   if (!node || typeof node !== 'object') return []
   return [node, ...(node.children ?? []).flatMap(flatten)]
 }
