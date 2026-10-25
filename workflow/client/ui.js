@@ -1,5 +1,6 @@
 import { graphModel, graphEdgePoints, nodeState, phaseModel, siteProgress, workflowView, actorBadge } from './graph.js'
 import { createArtifactView } from './artifact.js'
+import { createFusionView } from './fusion.js'
 import { WORKFLOW_VIEW_ID, workflowSelection, workflowEditorState } from './navigation.js'
 
 const SAMPLE = `interface Finding { summary: string; risks: string[] }
@@ -36,6 +37,9 @@ Object.assign(en, { mainTitle: 'Workflows', timeline: 'Phase timeline', stages: 
 
 Object.assign(zh, { structuralSource: '输入', structuralSink: '输出', structuralJoin: '汇合', structuralFanOut: '分发', structuralMark: '阶段', structuralEntry: '入口', structuralAbort: '中止', structuralTest: '判断', structuralNode: '结构', selectWorkflow: '选择运行或已保存流程', newWorkflow: '新建工作流', editScript: '编辑脚本', hideEditor: '收起脚本', saveScope: '保存位置', graphKind: '流程图类型', zoom: '画布缩放', zoomOutShort: '缩小', zoomInShort: '放大', actualSize: '原始大小', canvasHint: '选择节点查看详情；使用滚动条浏览画布', emptyGraphTitle: '流程将呈现在这里', noInstruction: '尚无已保留的任务指令', nodes: '节点', connections: '连接', backToGraph: '返回流程图' })
 Object.assign(en, { structuralSource: 'Input', structuralSink: 'Output', structuralJoin: 'Join', structuralFanOut: 'Fan out', structuralMark: 'Phase', structuralEntry: 'Entry', structuralAbort: 'Abort', structuralTest: 'Condition', structuralNode: 'Structure', selectWorkflow: 'Select a run or saved workflow', newWorkflow: 'New workflow', editScript: 'Edit script', hideEditor: 'Hide script', saveScope: 'Save location', graphKind: 'Graph type', zoom: 'Canvas zoom', zoomOutShort: 'Zoom out', zoomInShort: 'Zoom in', actualSize: 'Actual size', canvasHint: 'Select a node to inspect; scroll to explore the canvas', emptyGraphTitle: 'Your workflow appears here', noInstruction: 'No retained task instruction yet', nodes: 'nodes', connections: 'connections', backToGraph: 'Back to graph' })
+
+Object.assign(zh, {"fusionOpen":"Fusion 协作","fusionTitle":"Fusion 多模型协作","fusionIntro":"Lead 规划、Sidekick 实现、Reviewer 独立复核，自动运行指定测试。先生成草稿并检查流程，再确认执行。","fusionRoles":"Agent 分工","fusionRoleLead":"规划、拆解、最终签收","fusionRoleSidekick":"实现、测试失败后修复","fusionRoleReviewer":"只读审查、提出阻断问题","fusionTask":"开发或修复任务","fusionTaskPlaceholder":"例如：修复订单重量计算错误，添加回归测试，确保现有接口不变。","fusionNamePlaceholder":"可选，默认 Fusion · 协作修复","fusionInheritModel":"继承会话模型","fusionModelLead":"Lead 模型","fusionModelSidekick":"Sidekick 模型","fusionModelReviewer":"Reviewer 模型","fusionTest":"测试脚本（pnpm run）","fusionRounds":"最大审查轮次","fusionSafety":"创建流程不会启动模型。首次执行前必须在工作流面板确认。测试脚本在当前工作区运行，可能有副作用；请检查权限和脚本。","fusionCreateDraft":"生成草稿并查看流程","fusionTestPass":"通过","fusionTestFail":"失败","fusionReview":"独立审查","fusionReviewPass":"通过","fusionReviewFail":"未通过","fusionSignoff":"最终验收","fusionSignoffPass":"通过","fusionSignoffFail":"未通过","fusionNotYet":"尚无证据","fusionBlockingIssues":"阻断问题","fusionInspect":"查看节点和日志"})
+Object.assign(en, {"fusionOpen":"Fusion","fusionTitle":"Fusion multi-agent workflow","fusionIntro":"Lead plans, Sidekick implements, and Reviewer independently inspects the patch. A real test script is run before acceptance. Prepare a draft before confirming execution.","fusionRoles":"Agent roles","fusionRoleLead":"Plan, split work, final signoff","fusionRoleSidekick":"Implement and fix failed tests","fusionRoleReviewer":"Read-only review, blocking findings","fusionTask":"Engineering task","fusionTaskPlaceholder":"Example: Fix an order weight calculation bug and add regression tests without changing existing APIs.","fusionNamePlaceholder":"Optional: Fusion · collaborative repair","fusionInheritModel":"Inherit session model","fusionModelLead":"Lead model","fusionModelSidekick":"Sidekick model","fusionModelReviewer":"Reviewer model","fusionTest":"Test script (pnpm run)","fusionRounds":"Maximum review rounds","fusionSafety":"Creating a workflow does not start an agent. First launch requires your confirmation in the workflow panel. Inspect the test script and permissions before running.","fusionCreateDraft":"Prepare draft and inspect graph","fusionTestPass":"Passed","fusionTestFail":"Failed","fusionReview":"Independent review","fusionReviewPass":"Passed","fusionReviewFail":"Not approved","fusionSignoff":"Final acceptance","fusionSignoffPass":"Passed","fusionSignoffFail":"Not approved","fusionNotYet":"No evidence yet","fusionBlockingIssues":"Blocking issues","fusionInspect":"Inspect nodes and logs"})
 
 const css = `
 .caw-center,.caw-dock { box-sizing:border-box;height:100%;min-width:0;overflow:hidden;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);container-type:inline-size }
@@ -155,6 +159,23 @@ const css = `
 .caw-detail-heading { display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px }
 .caw-detail-heading h3 { margin:0;font-size:15px }
 @container(max-width:720px) { .caw-editor-fields { grid-template-columns:minmax(0,1fr) }.caw-header-actions { width:100%;margin-left:0;gap:6px }.caw-selection { flex-basis:100% }.caw-selection select { max-width:none }.caw-run-context { align-items:flex-start }.caw-graph-toolbar { align-items:flex-start }.caw-graph-kinds,.caw-zoom { width:100%;flex-wrap:wrap }.caw-summary-metrics { gap:6px 12px }.caw-run-heading h2 { font-size:15px }.caw-script textarea { min-height:240px } }
+
+.caw-fusion { margin-bottom:16px }
+.caw-fusion-roles { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;padding:14px 18px 0 }
+.caw-fusion-role { display:flex;flex-direction:column;gap:4px;min-width:0;padding:12px;border:1px solid var(--dsw-alias-border-l1);border-radius:9px;background:var(--dsw-alias-bg-base) }
+.caw-fusion-role strong { font-weight:650;font-size:12px }
+.caw-fusion-role span { font-size:11px;color:var(--dsw-alias-label-secondary);overflow-wrap:anywhere }
+.caw-fusion-fields>label:first-child { grid-column:1 / -1 }
+.caw-fusion-fields textarea { width:100%;resize:vertical;min-height:96px;background:var(--dsw-alias-bg-base) }
+.caw-fusion .caw-editor-title p { margin-top:5px }
+.caw-fusion-summary { padding:12px 16px;border:1px solid var(--dsw-alias-border-l1);border-radius:10px;background:var(--dsw-alias-bg-layer-1);display:flex;flex-direction:column;gap:10px;margin-bottom:14px }
+.caw-fusion-summary-header { display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap }
+.caw-fusion-summary-task { margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:110px;overflow:auto }
+.caw-fusion-checks { display:flex;gap:10px;flex-wrap:wrap;color:var(--dsw-alias-label-secondary);font-size:12px }
+.caw-fusion-checks>span { border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-base);border-radius:7px;padding:6px 10px }
+.caw-fusion-blockers { border-left:3px solid var(--dsw-alias-state-error-primary);padding-left:12px }
+.caw-fusion-blockers ul { margin:5px 0 0;padding-left:20px }
+@container(max-width:720px) { .caw-fusion-roles { grid-template-columns:minmax(0,1fr) } }
 @media(prefers-reduced-motion:reduce) { .caw-panel * { scroll-behavior:auto;transition:none;animation:none } }
 .caw-card .caw-btn,.caw-tool .caw-btn { display:inline-block;min-height:0;padding:6px 10px;border-radius:6px;font:inherit }
 .caw-card .caw-error,.caw-tool .caw-error { margin:0;padding:10px 16px;border:0;border-radius:0;display:block }
@@ -248,6 +269,7 @@ export function installWorkflowUI(ctx, React) {
   }
   const code = value => h('pre', { className: 'caw-code' }, typeof value === 'string' ? value : JSON.stringify(value, null, 2))
   const button = (label, onClick, disabled = false, primary = false, extra = {}) => h('button', { type: 'button', className: `caw-btn${primary ? ' primary' : ''}`, onClick, disabled, ...extra }, label)
+  const { FusionComposer, FusionSummary } = createFusionView(React, { t, button })
   const state = status => h('span', { className: 'caw-state', 'data-state': status }, t(status ?? 'unknown'))
 
   function FlowGraph({ analysis, kind, setKind, run, onNode }) {
@@ -368,6 +390,7 @@ export function installWorkflowUI(ctx, React) {
     const [tab, setTab] = useState(cached?.tab ?? workflowView(navigation?.params?.view)), [kind, setKind] = useState(cached?.kind ?? 'graph'), [picked, setPicked] = useState(cached?.picked ?? null)
     const [error, setError] = useState(''), [busy, setBusy] = useState(false)
     const [editorOpen, setEditorOpen] = useState(cached?.editorOpen ?? !runId)
+    const [fusionOpen, setFusionOpen] = useState(cached?.fusionOpen ?? false)
     const [modelRoute, setModelRoute] = useState(cached?.modelRoute ?? '')
     const [pageMore, setPageMore] = useState({})
     const [additionalNodes, setAdditionalNodes] = useState(null), [additionalEvents, setAdditionalEvents] = useState(null), [additionalReports, setAdditionalReports] = useState(null)
@@ -380,7 +403,7 @@ export function installWorkflowUI(ctx, React) {
     }, [navigation?.revision])
     const initialized = useRef(cached?.initialized ?? null)
     const editorSnapshot = useRef(null)
-    editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, initialized: initialized.current } }
+    editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, fusionOpen, initialized: initialized.current } }
     // The native main view unmounts on tab switches; keep unsaved authoring state.
     useEffect(() => () => { editorStates.set(sessionId, editorSnapshot.current) }, [sessionId])
     useEffect(() => {
@@ -396,7 +419,12 @@ export function installWorkflowUI(ctx, React) {
       catch (err) { setError(err.message); return null }
       finally { setBusy(false) }
     }
-    const choose = row => navigate(row.id)
+    const createFusion = async payload => {
+      const draft = await perform(payload)
+      if (draft?.id) { setFusionOpen(false); setEditorOpen(false); navigate(draft.id) }
+      return draft
+    }
+    const choose = row => { setFusionOpen(false); navigate(row.id) }
     const getArgs = () => {
       const value = JSON.parse(argsText)
       if (value === null || Array.isArray(value) || typeof value !== 'object') throw new Error(t('invalidArgs'))
@@ -449,6 +477,7 @@ export function installWorkflowUI(ctx, React) {
       if (saved) navigate(null, { saved })
     }
     const inspectNode = node => { setPicked(node); setTab('details') }
+    const inspectFusion = () => { setTab('details'); setFusionOpen(false) }
     return h('div', { className: main ? 'caw-center' : 'caw-dock' },
       h('style', null, css),
       h('section', { className: 'caw-panel', 'aria-label': run?.name ?? t('title'), 'data-workflow-panel': '', 'aria-busy': busy || Boolean(selected && !run && !feed.error) },
@@ -461,7 +490,8 @@ export function installWorkflowUI(ctx, React) {
               savedRows.length > 0 && h('optgroup', { label: t('saved') }, savedRows.map((row, index) => h('option', { key: `${row.scope}:${row.name}`, value: `saved:${index}` }, `${row.name} · ${t(row.scope)}`)))),
             h('span', { className: 'caw-meta', role: 'status' }, t(feed.live ? 'connected' : 'disconnected'))),
           h('div', { className: 'caw-header-actions' },
-            button(t('create'), () => { setEditorOpen(true); navigate(null) }, busy),
+            button(t('create'), () => { setFusionOpen(false); setEditorOpen(true); navigate(null) }, busy),
+            button(t('fusionOpen'), () => { setFusionOpen(value => !value); setEditorOpen(false) }, busy, false, { 'aria-expanded': fusionOpen, 'aria-controls': 'fusion-composer-panel' }),
             button(t(editorOpen ? 'hideEditor' : 'editScript'), () => setEditorOpen(value => !value), busy, false, { 'aria-expanded': editorOpen }),
             button(t('save'), () => perform({ action: 'save', name, script, scope }), busy || !valid),
             running && button(t('stop'), () => perform({ action: 'stop', id: selected }), busy),
@@ -474,6 +504,8 @@ export function installWorkflowUI(ctx, React) {
         (error || feed.error) && h('div', { className: 'caw-error', role: 'alert' }, error || feed.error, button(t('refresh'), () => feed.refresh(), busy)),
         selected && !run && !feed.error && h('div', { className: 'caw-empty', role: 'status' }, h('span', { className: 'caw-skeleton', 'aria-hidden': true }), h('span', { className: 'caw-skeleton', 'aria-hidden': true }), h('span', null, t('loading'))),
         h('div', { className: 'caw-body' },
+          fusionOpen && h('div', { id: 'fusion-composer-panel' }, h(FusionComposer, { modelRoutes: collection.modelRoutes ?? [], busy, onCreate: createFusion })),
+          run?.args?.preset === 'fusion.v1' && h(FusionSummary, { run, onDetails: inspectFusion }),
           editorOpen && h('section', { className: 'caw-editor', 'aria-label': t('authoring') }, h('div', { className: 'caw-editor-title' }, h('h3', null, t('authoring')), button(t('hideEditor'), () => setEditorOpen(false))), h('div', { className: 'caw-editor-fields' },
             h('label', null, t('name'), h('input', { value: name, onChange: event => setName(event.target.value), maxLength: 120 })),
             h('label', { className: 'caw-script' }, t('script'), h('textarea', { value: script, spellCheck: false, onChange: event => setScript(event.target.value) })),
