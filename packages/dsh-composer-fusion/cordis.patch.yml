@@ -1,0 +1,4 @@
+# Standalone experimental package; does not modify the composer prediction row.
+- insert:
+    - id: dsh-composer-fusion
+      name: dsh-composer-fusion
