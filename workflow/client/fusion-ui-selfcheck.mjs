@@ -24,7 +24,7 @@ const control = (tree, id) => {
   assert(found, 'missing visible field ' + id)
   return found
 }
-const actionButton = tree => controls(tree).find(row => row.type === 'button' && row.children.includes('fusionCreateDraft'))
+const actionButton = tree => controls(tree).find(row => row.type === 'button' && (row.children.includes('fusionCreateDraft') || row.children.includes('loading')))
 
 let captured
 const props = {
