@@ -21,12 +21,17 @@ mkdirSync(dist, { recursive: true })
 // This never changes the published prediction package's client bundle.
 runNode(join(root, 'scripts/build-workflow.mjs'))
 
+// The vendored TypeScript compiler is CommonJS and uses require('fs') at module
+// initialization. Preserve a real Node require in the ESM bundle instead of
+// esbuild's throwing dynamic-require shim. Keep this Node-only banner OUT of the
+// browser client bundle.
+const nodeBanner = { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" }
 const common = { bundle: true, logLevel: 'info', legalComments: 'eof' }
 await build({
   ...common,
   entryPoints: [join(root, 'workflow/plugin.js')],
   outfile: join(dist, 'index.js'),
-  format: 'esm', platform: 'node', target: 'node22',
+  format: 'esm', platform: 'node', target: 'node22', banner: nodeBanner,
 })
 // compiler worker is a separate Node Worker script, referenced by the Host
 // through new URL('./compiler-worker.js', import.meta.url).
