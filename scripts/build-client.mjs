@@ -11,13 +11,19 @@ if (source.split(marker).length !== 2) throw new Error('Composer Client activati
 await mkdir(resolve(root, 'dist'), { recursive: true })
 await build({
   stdin: {
-    contents: `${source}`,
+    contents: `import { installWorkflowUI } from './workflow/client/ui.js';\n${source.replace(marker, `${marker}\n        installWorkflowUI(ctx, React)`)}`,
     resolveDir: root, sourcefile: 'composer-assist-client.js', loader: 'js',
   },
   bundle: true, format: 'iife', platform: 'browser', target: 'es2022',
   outfile: resolve(root, 'dist/client.js'), legalComments: 'eof',
 })
-// The ZCode workflow host is kept in the tree but no longer built or shipped:
-// see workflow/README-ISOLATED.md. Building it here would put an unused bundle
-// back into dist and re-couple the prediction package to the workflow deps.
-console.log('Built composer prediction Client.')
+await build({
+  entryPoints: [resolve(root, 'workflow/plugin.js')], bundle: true, format: 'esm', platform: 'node', target: 'node22',
+  external: ['@zcode/dynamic-workflow', '@zcode/dynamic-workflow-runtime'],
+  outfile: resolve(root, manifest.exports['./workflow']), legalComments: 'eof',
+})
+await build({
+  entryPoints: [resolve(root, 'workflow/host/compiler-worker.js')], bundle: true, format: 'esm', platform: 'node', target: 'node22',
+  external: ['@zcode/dynamic-workflow'], outfile: resolve(root, 'dist/compiler-worker.js'), legalComments: 'eof',
+})
+console.log('Built composer prediction and opt-in Fusion workflow Client, Host and compiler worker.')
