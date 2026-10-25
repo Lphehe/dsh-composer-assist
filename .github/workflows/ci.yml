@@ -30,6 +30,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build isolated workflow compiler
+        run: node scripts/build-workflow.mjs
+
+      - name: Compile Fusion with ZCode (no model calls)
+        run: node workflow/host/fusion-compile-selfcheck.mjs
+
       - name: Validate source and committed bundles
         run: pnpm run selfcheck
 
