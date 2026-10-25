@@ -66,7 +66,7 @@ export function createFusionDraft(input) {
       'Implement the assigned change in the current workspace with minimal diffs. Use the inherited DSH tools and permissions. Return the files changed. Do not merge, push or deploy.',
       sidekickModel),
     actor('reviewer', 'Fusion Reviewer',
-      'Independently inspect the implementation and Git changes. Use read-only tools; do not edit, deploy or approve without evidence. Report concrete blocking issues as structured data.',
+      '[fusion-review-only:v1] Independently inspect the implementation and Git changes. Use read-only tools; do not edit, deploy or approve without evidence. Report concrete blocking issues as structured data.',
       reviewModel),
     'const cfg = args as { task: string; maxRounds: number; testScript: string; timeoutMs: number };',
     'phase("计划");',
