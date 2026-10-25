@@ -40,6 +40,7 @@ jobs:
         run: |
           node workflow/client/selfcheck.mjs
           node workflow/client/fusion-ui-selfcheck.mjs
+          node workflow/client/fusion-terminal-selfcheck.mjs
           pnpm exec esbuild workflow/client/ui.js --bundle --platform=browser --format=esm --outfile=/tmp/dsh-fusion-workflow-ui.js
 
       - name: Validate source and committed bundles
