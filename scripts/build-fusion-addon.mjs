@@ -39,7 +39,7 @@ await build({
   ...common,
   entryPoints: [join(root, 'workflow/host/compiler-worker.js')],
   outfile: join(dist, 'compiler-worker.js'),
-  format: 'esm', platform: 'node', target: 'node22',
+  format: 'esm', platform: 'node', target: 'node22', banner: nodeBanner,
 })
 await build({
   ...common,
