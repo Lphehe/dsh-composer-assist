@@ -69,6 +69,7 @@ export function createFusionView(React, { t, button }) {
       ),
       h('div', { className: 'caw-editor-actions' },
         h('p', { className: 'caw-note' }, t('fusionSafety')),
+        h('p', { className: 'caw-note' }, t('fusionTestHint')),
         h('div', { className: 'caw-row' },
           button(busy ? t('loading') : t('fusionCreateDraft'), create,
             busy || !task.trim() || !/^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$/.test(testScript), true)))
