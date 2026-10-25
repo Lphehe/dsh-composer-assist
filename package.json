@@ -13,7 +13,7 @@
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "build": "node scripts/build-client.mjs",
-    "selfcheck": "node selfcheck.mjs && node scripts/bundle-freshness-selfcheck.mjs"
+    "selfcheck": "node selfcheck.mjs && node scripts/bundle-freshness-selfcheck.mjs && node workflow/host/fusion-template-selfcheck.mjs"
   },
   "dependencies": {},
   "engines": {
