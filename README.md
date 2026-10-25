@@ -66,6 +66,11 @@ plugin_manager install_bundle  target: <克隆目录的绝对路径>
 
 Clone, run `pnpm install --frozen-lockfile`, `pnpm run build` and `pnpm run selfcheck`, then load the directory as a bundle with `plugin_manager install_bundle`. Do not keep both a linked development directory and an npm copy active at once.
 
+## 文档 · Docs
+
+- [市场投稿规范 · Market submission rules](<docs/market-submission.md>) —— 收录到 DSH 插件市场的硬性要求与本插件的提交状态
+- [原生链路验收 · Native path verification](<docs/openrouter-dsh-verification.md>) —— OpenRouter 经宿主原生 LLM 链路的实测记录
+
 ## 设置 · Settings
 
 设置 → **输入框预测** · Settings → **Composer prediction**
