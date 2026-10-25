@@ -93,6 +93,7 @@ export function createDshDriver(parent, config) {
     const inheritedTools = new Set(ctx.get('tools').schemas(parent).map(tool => tool.name))
     const deniedGlobals = ctx.get('tools').schemas().map(tool => tool.name).filter(name => !inheritedTools.has(name))
     if (deniedGlobals.length) childCtx.get('tools').restrict({ deny: deniedGlobals })
+    const readOnlyFusionReviewer = typeof persona.system === 'string' && persona.system.startsWith('[fusion-review-only:v1]')
     const stagedSubmits = new Map()
     const pendingTools = new Map()
     let nestedSubmit
@@ -105,6 +106,7 @@ export function createDshDriver(parent, config) {
       if (!state) return '当前没有获准执行的工作流 ask'
       if (stagedSubmits.size || nestedSubmit || state.submitted !== undefined || state.accepted) return '当前 ask 已提交结果，等待引擎收口'
       if (exec.arguments && typeof exec.arguments === 'object' && exec.arguments.sandbox_permissions !== undefined) return '工作流子代理不能扩大创建时的权限范围'
+      if (readOnlyFusionReviewer && !READ_TOOLS.has(exec.name) && !['submit_result', 'escalate'].includes(exec.name)) return 'Fusion Reviewer 是只读审查角色，不能执行修改类工具'
       if (['workflow', 'zcode_workflow', 'create_goal', 'ralph', 'plugin_manager', 'subagent', 'subagent_fork', 'subagent_codex', 'spawn_teammate', 'team_task_create', 'team_task_update', 'interrupt_agent'].includes(exec.name)) return '工作流的派发和任务状态由 ZCode 引擎管理；队友可通过 send_message 协作，不能启动第二套编排或修改环境'
       return undefined
     })
