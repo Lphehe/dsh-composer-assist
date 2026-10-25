@@ -8,10 +8,13 @@ import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const tracked = ['dist/client.js', 'dist/compiler-worker.js'];
+// The ZCode workflow worker was isolated in v0.7.0 and is no longer built or shipped.
+// Only verify artifacts currently produced by build-client.mjs.
+const tracked = ['dist/client.js'];
 const before = new Map(tracked.map(file => [file, readFileSync(join(root, file))]));
 
-// Build into a copy so a mismatch cannot overwrite the committed artifact here.
+// Preserve the committed bundle before rebuilding so this check can restore it
+// even when a stale bundle is detected or the build fails.
 const staging = mkdtempSync(join(tmpdir(), 'bundle-freshness-'));
 try {
   for (const file of tracked) copyFileSync(join(root, file), join(staging, file.replaceAll('/', '_')));
