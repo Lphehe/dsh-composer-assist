@@ -82,6 +82,8 @@ export function createFusionView(React, { t, button }) {
     const tests = result?.test
     const review = result?.review
     const outcome = result?.success === undefined ? undefined : result.success === true
+    // A model vote is not an approval while unresolved blocking findings remain.
+    const reviewApproved = review === undefined ? undefined : review.approved === true && Array.isArray(review.blockingIssues) && review.blockingIssues.length === 0
     return h('section', { className: 'caw-fusion-summary', 'data-fusion-summary': '', 'aria-label': t('fusionTitle') },
       h('div', { className: 'caw-fusion-summary-header' },
         h('div', null, h('strong', null, t('fusionTitle')), h('span', { className: 'caw-note' }, ' · ' + t('fusionRounds') + ': ' + (result?.rounds ?? '—') + ' / ' + args.maxRounds)),
@@ -89,7 +91,7 @@ export function createFusionView(React, { t, button }) {
       h('p', { className: 'caw-fusion-summary-task' }, args.task),
       h('div', { className: 'caw-fusion-checks' },
         h('span', null, t('fusionTest'), ': ', tests === undefined ? t('fusionNotYet') : tests.exitCode === 0 ? t('fusionTestPass') : t('fusionTestFail') + ' (' + tests.exitCode + ')'),
-        h('span', null, t('fusionReview'), ': ', statusText(review?.approved, 'fusionReview')),
+        h('span', null, t('fusionReview'), ': ', statusText(reviewApproved, 'fusionReview')),
         h('span', null, t('fusionSignoff'), ': ', statusText(outcome, 'fusionSignoff'))),
       Array.isArray(review?.blockingIssues) && review.blockingIssues.length > 0 &&
         h('div', { className: 'caw-fusion-blockers', role: 'status' },
