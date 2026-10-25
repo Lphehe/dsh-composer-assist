@@ -98,7 +98,7 @@ export function createFusionDraft(input) {
   return {
     name,
     script: lines.join('\n') + '\n',
-    args: { task, maxRounds, testScript, timeoutMs },
+    args: { preset: 'fusion.v1', task, maxRounds, testScript, timeoutMs, models: { lead: leadModel ?? null, sidekick: sidekickModel ?? null, reviewer: reviewModel ?? null } },
     concurrency: 3,
   }
 }
