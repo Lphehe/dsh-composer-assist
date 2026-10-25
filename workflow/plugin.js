@@ -1,9 +1,10 @@
 import { FACADE_DTS, SNIPPET_FACADE_DTS } from '@zcode/dynamic-workflow'
 import { createWorkflowManager } from './host/manager.js'
+import { createFusionDraft } from './host/fusion-template.js'
 
 export const inject = ['tools', 'agents', 'agentTeams', 'subagents', 'connection', 'systemPrompt', 'fs', 'shell', 'jobs', 'sandboxPolicy', 'sessions', 'sessionQuery', 'sessionPersistence', 'agentPresets']
 const API = '/api/composer-assist/workflow'
-const actions = ['help', 'analyze', 'create', 'list', 'get', 'stop', 'resume', 'amend', 'save', 'list_saved', 'run_saved', 'answer', 'resolve_hold', 'fill_hole', 'nodes', 'events', 'reports']
+const actions = ['help', 'analyze', 'create', 'fusion_create', 'list', 'get', 'stop', 'resume', 'amend', 'save', 'list_saved', 'run_saved', 'answer', 'resolve_hold', 'fill_hole', 'nodes', 'events', 'reports']
 const text = value => [{ type: 'text', text: JSON.stringify(value) }]
 const response = (status, body) => new Response(JSON.stringify(body), {
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
@@ -26,6 +27,7 @@ export async function apply(ctx) {
     if (action === 'help') return { facade: FACADE_DTS, snippetFacade: SNIPPET_FACADE_DTS, instructions: 'Write ordinary TypeScript with phase(), agent().ask<T>(), await, Promise.all and loops. create prepares a graph and script for user confirmation in the Workflow panel. It never starts agents. Resume replays completed nodes; amend imports matching predecessor results. Call get for run details. All workspace operations retain the parent permissions.' }
     if (action === 'analyze') return manager.analyze(input.script)
     if (action === 'create') return manager.prepare(parent, input)
+    if (action === 'fusion_create') return manager.prepare(parent, createFusionDraft(input))
     if (action === 'launch') {
       if (!human) throw new Error('首次运行须由用户在工作流面板确认')
       return manager.launch(parent, input.id)
@@ -58,13 +60,20 @@ export async function apply(ctx) {
 
   ctx.effect(() => ctx.tools.register({
     name: 'zcode_workflow',
-    description: 'Prepare and manage ZCode TypeScript workflows; call action=help for the script API.',
+    description: 'Prepare and manage ZCode TypeScript workflows. fusion_create prepares a bounded Lead/Sidekick/Reviewer repair loop; first launch still needs confirmation. Call action=help for the script API.',
     parameters: {
       type: 'object', additionalProperties: false, required: ['action'],
       properties: {
         action: { type: 'string', enum: actions },
         id: { type: 'string', description: 'Run id returned by create or list.' },
         script: { type: 'string', description: 'TypeScript function body; phase markers are required by the upstream compiler.' },
+        task: { type: 'string', description: 'Fusion task, only used by fusion_create (up to 12,000 chars).' },
+        leadModel: { type: 'string', description: 'Optional Fusion Lead model; must be session-approved.' },
+        sidekickModel: { type: 'string', description: 'Optional Fusion Sidekick model; must be session-approved.' },
+        reviewModel: { type: 'string', description: 'Optional Fusion Reviewer model; must be session-approved.' },
+        maxRounds: { type: 'integer', minimum: 1, maximum: 3, description: 'Bounded Fusion review/fix rounds (default 2).' },
+        testScript: { type: 'string', description: 'pnpm script name executed as pnpm run <name> (default selfcheck).' },
+        timeoutMs: { type: 'integer', minimum: 1000, maximum: 300000, description: 'Time limit per test run.' },
         name: { type: 'string', description: 'Workflow name, or saved workflow to run.' },
         args: { type: 'object', additionalProperties: true, description: 'JSON arguments exposed as args in the script.' },
         concurrency: { type: 'integer', minimum: 1, maximum: 64 },
@@ -82,7 +91,7 @@ export async function apply(ctx) {
     async execute(input, exec) {
       if (exec.agent === undefined) throw new Error('工作流需要当前会话')
       const value = await perform(exec.agent, input)
-      return ['create', 'resume', 'amend', 'stop', 'run_saved'].includes(input.action) ? compact(value) : value
+      return ['create', 'fusion_create', 'resume', 'amend', 'stop', 'run_saved'].includes(input.action) ? compact(value) : value
     },
   }), 'dynamic-workflow: model tool')
 
