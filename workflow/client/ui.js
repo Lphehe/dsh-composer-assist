@@ -1,6 +1,7 @@
 import { graphModel, graphEdgePoints, nodeState, phaseModel, siteProgress, workflowView, actorBadge } from './graph.js'
 import { createArtifactView } from './artifact.js'
 import { createFusionView } from './fusion.js'
+import { createFusionTerminalView } from './fusion-terminal.js'
 import { WORKFLOW_VIEW_ID, workflowSelection, workflowEditorState } from './navigation.js'
 
 const SAMPLE = `interface Finding { summary: string; risks: string[] }
@@ -43,6 +44,9 @@ Object.assign(en, {"fusionOpen":"Fusion","fusionTitle":"Fusion multi-agent workf
 
 Object.assign(zh, { fusionTestHint: '默认执行 pnpm run selfcheck；如果当前项目没有 selfcheck 脚本，请修改为 package.json 中实际存在的脚本。' })
 Object.assign(en, { fusionTestHint: 'Default: pnpm run selfcheck. Choose a script defined in the current project package.json before launch.' })
+
+Object.assign(zh, {"fusionTerminalTitle":"融合协作 · 实时拓扑","fusionTerminalOversight":"决策与监督","fusionTerminalDecision":"决策层","fusionTerminalSignoff":"最终签收","fusionTerminalNotAdvisor":"此处显示真实 Lead 状态；按需顾问尚未接入","fusionTerminalUnknown":"尚无模型记录","fusionTerminalExecution":"主执行链","fusionTerminalBuild":"代码实现","fusionTerminalGate":"确定性测试门禁","fusionTerminalParallel":"计划 / 验证 / 审查","fusionTerminalPlan":"规划","fusionTerminalTest":"测试","fusionTerminalReview":"审查","fusionTerminalReturn":"返回 Lead · 检查和签收","fusionTerminalLogs":"实时执行事件","fusionTerminalNoLogs":"尚无执行事件","fusionTerminalEvidence":"只显示实际工作流事件、Token 和测试证据；连接动画仅在运行时出现","fusionTerminalView":"实时拓扑","fusionTerminalGraph":"完整依赖图"})
+Object.assign(en, {"fusionTerminalTitle":"Fusion / live topology","fusionTerminalOversight":"Decision & oversight","fusionTerminalDecision":"Decision","fusionTerminalSignoff":"Final sign-off","fusionTerminalNotAdvisor":"Real Lead status only; no on-demand Advisor integration yet","fusionTerminalUnknown":"Not observed","fusionTerminalExecution":"Primary execution","fusionTerminalBuild":"Implementation","fusionTerminalGate":"Deterministic test gate","fusionTerminalParallel":"Plan / test / review","fusionTerminalPlan":"Plan","fusionTerminalTest":"Test","fusionTerminalReview":"Review","fusionTerminalReturn":"Back to Lead · verification","fusionTerminalLogs":"Live events","fusionTerminalNoLogs":"No workflow events yet","fusionTerminalEvidence":"Only real workflow events, tokens and test evidence are shown; lines animate only while running","fusionTerminalView":"Live topology","fusionTerminalGraph":"Full dependency graph"})
 
 const css = `
 .caw-center,.caw-dock { box-sizing:border-box;height:100%;min-width:0;overflow:hidden;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);container-type:inline-size }
@@ -273,6 +277,7 @@ export function installWorkflowUI(ctx, React) {
   const code = value => h('pre', { className: 'caw-code' }, typeof value === 'string' ? value : JSON.stringify(value, null, 2))
   const button = (label, onClick, disabled = false, primary = false, extra = {}) => h('button', { type: 'button', className: `caw-btn${primary ? ' primary' : ''}`, onClick, disabled, ...extra }, label)
   const { FusionComposer, FusionSummary } = createFusionView(React, { t, button })
+  const { FusionTerminal } = createFusionTerminalView(React, { t, button })
   const state = status => h('span', { className: 'caw-state', 'data-state': status }, t(status ?? 'unknown'))
 
   function FlowGraph({ analysis, kind, setKind, run, onNode }) {
@@ -394,6 +399,7 @@ export function installWorkflowUI(ctx, React) {
     const [error, setError] = useState(''), [busy, setBusy] = useState(false)
     const [editorOpen, setEditorOpen] = useState(cached?.editorOpen ?? !runId)
     const [fusionOpen, setFusionOpen] = useState(cached?.fusionOpen ?? false)
+    const [terminalMode, setTerminalMode] = useState(cached?.terminalMode ?? true)
     const [fusionDraft, setFusionDraft] = useState(cached?.fusionDraft)
     const [modelRoute, setModelRoute] = useState(cached?.modelRoute ?? '')
     const [pageMore, setPageMore] = useState({})
@@ -407,13 +413,14 @@ export function installWorkflowUI(ctx, React) {
     }, [navigation?.revision])
     const initialized = useRef(cached?.initialized ?? null)
     const editorSnapshot = useRef(null)
-    editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, fusionOpen, fusionDraft, initialized: initialized.current } }
+    editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, fusionOpen, fusionDraft, terminalMode, initialized: initialized.current } }
     // The native main view unmounts on tab switches; keep unsaved authoring state.
     useEffect(() => () => { editorStates.set(sessionId, editorSnapshot.current) }, [sessionId])
     useEffect(() => {
       if (!run || initialized.current === run.id) return
       initialized.current = run.id
       setScript(run.script); setName(run.name); setAnalysis(run.analysis); setAnalyzedScript(run.script)
+      if (run.args?.preset === 'fusion.v1') setTab(previous => previous === 'timeline' ? 'overview' : previous)
       setArgsText(JSON.stringify(run.args ?? {}, null, 2)); setConcurrency(run.concurrency ?? 4)
       setModelRoute(run.provider ? JSON.stringify({ provider: run.provider, model: run.model }) : '')
     }, [run])
@@ -529,7 +536,14 @@ export function installWorkflowUI(ctx, React) {
               (run?.holes??[]).filter(hole=>hole.status!=='filled'&&hole.value===undefined).map((hole,i)=>h('section',{key:hole.id??i,className:'caw-section caw-intervention'},h('h3',null,`${t('holes')}: ${hole.name??hole.id}`),code(hole),h('textarea',{'aria-label':t('fill'),value:answers[hole.id]??'',onChange:e=>setAnswers({...answers,[hole.id]:e.target.value})}),button(t('fill'),async()=>{try {await perform({action:'fill_hole',id:selected,holeId:hole.id,body:answers[hole.id]??''})}catch(err){setError(err.message)}},busy))),
               holds.length > 0 && h('section',{className:'caw-section caw-intervention'},h('h3',null,t('holds')),h('p',{className:'caw-note'},t('holdNote')),holds.map((hold,i)=>h('div',{key:hold.nodeId??i},code(hold),h('textarea',{'aria-label':t('accept'),value:answers[hold.nodeId]??'',onChange:e=>setAnswers({...answers,[hold.nodeId]:e.target.value})}),h('div',{className:'caw-row'},button(t('retry'),()=>perform({action:'resolve_hold',id:selected,nodeId:hold.nodeId,resolution:'retry'}),busy),button(t('accept'),async()=>{try {await perform({action:'resolve_hold',id:selected,nodeId:hold.nodeId,resolution:'accept',value:JSON.parse(answers[hold.nodeId])})}catch(err){setError(err.message)}},busy))))),
                tab==='timeline' && h(Timeline,{run:run??{analysis:currentAnalysis},onNode:inspectNode}),
-               tab==='overview' && h(React.Fragment,null,h(FlowGraph,{analysis:currentAnalysis,kind,setKind,run,onNode:inspectNode}),run?.resumedFrom&&h('p',{className:'caw-note'},`${t('source')}: ${run.resumedFrom}`)),
+               tab==='overview' && h(React.Fragment,null,
+                 run?.args?.preset === 'fusion.v1' && h('div',{className:'caw-row',role:'group','aria-label':t('fusionTerminalTitle'),style:{marginBottom:12}},
+                   button(t('fusionTerminalView'),()=>setTerminalMode(true),false,false,{'aria-pressed':terminalMode}),
+                   button(t('fusionTerminalGraph'),()=>setTerminalMode(false),false,false,{'aria-pressed':!terminalMode})),
+                 terminalMode && run?.args?.preset === 'fusion.v1'
+                   ? h(FusionTerminal,{run:{...run,events:visibleEvents,reports:mergeRows(run?.reports,additionalReports,row=>String(row.instance?.siteId)+':'+String(row.instance?.ordinal))},onLogs:inspectFusion})
+                   : h(FlowGraph,{analysis:currentAnalysis,kind,setKind,run,onNode:inspectNode}),
+                 run?.resumedFrom&&h('p',{className:'caw-note'},`${t('source')}: ${run.resumedFrom}`)),
               tab==='details' && h(React.Fragment,null,run?.nativeTeam&&h('details',null,h('summary',null,'DSH Teams / Subagents'),code({team:run.nativeTeam,members:run.actors})),h('div',{className:'caw-detail-heading'},h('h3',null,t('node')),button(t('backToGraph'),()=>setTab('overview'))),picked?code({site:picked,instances:detailNodes}):h('p',{className:'caw-note'},t('noNode')),
                 h('details',null,h('summary',null,`${t('details')} (${run?.nodes?.length??0})`),h('p',{className:'caw-note'},`${visibleNodes.length} / ${run?.counts?.nodes??'—'}`),code(visibleNodes),(pageMore.nodes ?? run?.nodesPage?.hasMore)&&button(t('loadMore'),()=>loadAll('nodes',setAdditionalNodes),busy)),h('section',{className:'caw-section'},h('h3',null,t('events')),(pageMore.events ?? run?.eventsPage?.earlierOmitted)&&h('p',{className:'caw-note'},t('clipped')),visibleEvents.map((event,i)=>h('div',{className:'caw-log',key:event.sequence??i},h('time',null,event.timeCreated?new Date(event.timeCreated).toLocaleTimeString():''),event.event?.message??event.event?.type??event.message??event.type??JSON.stringify(event),h('details',null,h('summary',null,t('details')),code(event)))),(pageMore.events ?? run?.eventsPage?.earlierOmitted)&&button(t('loadMore'),()=>loadAll('events',setAdditionalEvents),busy),!run?.events?.length&&h('p',{className:'caw-note'},t('noEvents')))),
               tab==='results'&&h(React.Fragment,null,run?.result!==undefined&&h('section',null,h('h3',null,t('output')),code(run.result)),(run?.artifacts??[]).map((item,i)=>h(Artifact,{key:`${item.id}:${item.version??i}`,item,reports:run?.reports,sessionId,runId:selected,revision:run?.updatedAt})),run?.reports?.length>0&&h('section',{className:'caw-section'},h('h3',null,t('reports')),code(mergeRows(run.reports,additionalReports,row=>`${row.instance.siteId}:${row.instance.ordinal}`)),(pageMore.reports ?? run.reportsPage?.hasMore)&&button(t('loadMore'),()=>loadAll('reports',setAdditionalReports),busy)),run?.result===undefined&&!run?.artifacts?.length&&!run?.reports?.length&&h('p',{className:'caw-note'},t('noResults'))),
