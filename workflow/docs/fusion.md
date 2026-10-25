@@ -41,10 +41,11 @@ Remove optional model fields to inherit the parent session's chosen subagent rou
 - The reviewer sees a Git diff, which does not include untracked file contents by default. Do not treat its approval as complete coverage; test failures and Lead sign-off remain separate gates.
 - Retry rounds are limited, and the tool intentionally does not auto-merge, push or deploy.
 - `workflow/` is currently excluded from the package exports and npm files. Activating it requires a separately reviewed DSH workflow packaging/integration step and a real-host smoke test.
-- Template selfchecks are model-free tests, **not** evidence of a successful paid Agent run or of the DSH workflow compiler accepting this exact generated script.
+- Template selfchecks are model-free. GitHub CI also builds the ZCode compiler and requires it to accept the generated Fusion script. **Neither check proves a successful paid Agent run or DSH desktop/Host integration.**
 
 Run unit check from repository root after installing dev dependencies:
 
 ```sh
 node workflow/host/fusion-template-selfcheck.mjs
+# CI additionally builds ZCode and compiles the generated recipe.
 ```
