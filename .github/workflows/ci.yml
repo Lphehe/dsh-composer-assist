@@ -43,7 +43,9 @@ jobs:
           pnpm exec esbuild workflow/client/ui.js --bundle --platform=browser --format=esm --outfile=/tmp/dsh-fusion-workflow-ui.js
 
       - name: Validate source and committed bundles
-        run: pnpm run selfcheck
+        run: |
+          pnpm run selfcheck
+          git diff --exit-code -- dist/client.js dist/workflow-host.js dist/compiler-worker.js
 
       - name: Verify build and package layout
         run: |

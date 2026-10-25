@@ -68,7 +68,8 @@ async function check(mode) {
       get: name => services[name] ?? childCtx[name] ?? ctx[name],
       systemPrompt: { section() {} },
       on(name, handler) { const rows = handlers.get(name) ?? []; rows.push(handler); handlers.set(name, rows); return () => {} },
-      tools: { restrict(filter) { assert.deepEqual(filter, { deny: ['not_visible'] }); denied = filter.deny }, guard(guard) { guards.push(guard) }, register(definition) { definitions.set(definition.name, definition) } },
+      effect(factory) { return factory() },
+      tools: { presentAs(mode) { assert.equal(mode, 'native'); trace.push('native-reviewer'); return () => {} }, restrict(filter) { assert.deepEqual(filter, { deny: ['not_visible'] }); denied = filter.deny }, guard(guard) { guards.push(guard) }, register(definition) { definitions.set(definition.name, definition) } },
     }
     const agent = {
       id: options.sessionId, ctx: childCtx, session, options: options.agentOptions,
@@ -101,6 +102,11 @@ async function check(mode) {
             }
             assert.ok(definitions.has('submit_result'), 'typed tools must exist before the first native request')
             for (const name of ['spawn_teammate', 'team_task_update', 'zcode_workflow']) assert.ok(guards.some(guard => guard({ name })), 'actors cannot bypass engine-owned admission')
+            if (mode === 'reviewer') {
+              assert.ok(trace.includes('native-reviewer'))
+              for (const name of ['write', 'bash', 'run_code']) assert.ok(guards.some(guard => guard({ name })), `Reviewer must deny ${name}`)
+              assert.ok(guards.every(guard => guard({ name: 'read' }) === undefined))
+            }
             if (mode === 'unknown-mutation') await execute('write', { path: 'x' }, true)
             await execute('submit_result', { value: { ok: true } }, mode === 'post-error')
             session.append('assistant/message', { role: 'assistant', content: [{ type: 'text', text: 'done' }], usage: { totalTokens: 17 } })
@@ -186,6 +192,14 @@ async function check(mode) {
   parent.ctx = ctx
   const routes = resolveRoutes(parent, {}, { modelReferences: [] })
   assert.equal(routes.base.model, 'child-model')
+  assert.throws(() => resolveRoutes(parent, { routePin: { base: { provider: 'revoked', model: 'old' } } }, { modelReferences: [] }), /允许列表/)
+  assert.throws(() => resolveRoutes(parent, { routePin: { base: routes.base, bindings: { reviewer: { provider: 'revoked', model: 'old' } } } }, { modelReferences: [] }), /允许列表/)
+  assert.deepEqual(resolveRoutes(parent, { routePin: routes }, { modelReferences: [] }), routes)
+  const disabledParent = { ...parent, ctx: { get: name => name === 'subagentModelSelection' ? { current: () => ({ enabled: false, allowedModels: [{ provider: 'revoked', model: 'old' }] }) } : ctx.get(name) } }
+  const disabledRoutes = resolveRoutes(disabledParent, { objective: 'latency', stats: { candidates: [{ provider: 'revoked', model: 'old' }], scoreOf: () => 1 } }, { modelReferences: [] })
+  assert.equal(disabledRoutes.base.model, 'parent-model')
+  const pinnedControls = { ...disabledRoutes, base: { ...disabledRoutes.base, reasoningEffort: 'low', maxTokens: 100 } }
+  assert.deepEqual(resolveRoutes({ ...disabledParent, options: { ...disabledParent.options, reasoningEffort: 'high', maxTokens: 500 } }, { routePin: pinnedControls }, { modelReferences: [] }), pinnedControls)
   assert.throws(() => resolveRoutes(parent, { provider: 'other', model: 'other' }, { modelReferences: [] }), /允许列表/)
   let accepted = 0
   let ended = 0
@@ -210,7 +224,7 @@ async function check(mode) {
       return
     }
     const before = requests
-    const session = await driver.createActorSession(actor, { name: 'worker' })
+    const session = await driver.createActorSession(actor, { name: 'worker', ...(mode === 'reviewer' ? { system: '[fusion-review-only:v1] audit only' } : {}) })
     assert.equal(requests, before, 'coordinator and actor initialization must make zero model requests')
     if (sessionId) assert.equal(session.id, sessionId, 'resume must retain the exact original native member')
     sessionId = session.id
@@ -249,5 +263,5 @@ async function check(mode) {
   assert.ok([...board.values()].every(row => row.status === (mode === 'post-error' ? 'pending' : 'completed')))
   if (mode === 'unknown-mutation') assert.ok([...effects.values()].every(row => row.state === 'unknown'))
 }
-for (const mode of ['success', 'post-error', 'unknown-mutation', 'capacity']) await check(mode)
+for (const mode of ['success', 'post-error', 'unknown-mutation', 'capacity', 'reviewer']) await check(mode)
 console.log('driver selfcheck passed: native Teams/provider/catalog, cold typed asks, run resume/member identity, authoritative task completion, capacity refusal, policy/model inheritance and owned cleanup')

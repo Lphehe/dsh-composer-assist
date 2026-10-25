@@ -4,9 +4,9 @@ import { mkdtempSync, readdirSync, readFileSync, rmSync, existsSync } from 'node
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { execFileSync } from 'node:child_process'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
-const cwd = new URL('../', import.meta.url).pathname
+const cwd = fileURLToPath(new URL('../', import.meta.url))
 const root = mkdtempSync(join(tmpdir(), 'dsh-fusion-pack-'))
 try {
   execFileSync('pnpm', ['pack', '--pack-destination', root], { cwd, stdio: 'pipe' })

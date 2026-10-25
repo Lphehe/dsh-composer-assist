@@ -20,6 +20,14 @@ const labelOf = value => { if (value === undefined) return '动态工作流'; if
 const ROUTING_OBJECTIVES = new Set(['none', 'latency', 'cost', 'balanced'])
 const routingOf = value => { if (value === undefined) return 'none'; if (!ROUTING_OBJECTIVES.has(value)) fail('路由目标必须是 none、latency、cost 或 balanced'); return value }
 
+export function checkExecutionCapabilities(parent, preset) {
+  const required = ['agentTeams', 'subagents', 'tools', 'fs', 'shell', 'jobs', 'sandboxPolicy', 'sessions', 'sessionQuery', 'sessionPersistence', 'agentPresets']
+  const missing = required.filter(name => !parent.ctx.get(name))
+  if (missing.length) fail(`当前会话缺少工作流执行能力：${missing.join(', ')}。请启用原生智能体团队并重新打开会话。`, 'WorkflowCapabilityMissing')
+  // shortcut: world.run requires native dispatch; add a guarded PTC transport before enabling PTC workflows.
+  if (preset === 'fusion.v1' && parent.ctx.get('tools').schemas(parent).some(tool => tool.name === 'run_code')) fail('当前 Fusion 自动测试需要原生工具模式；请切换到原生工具预设后再运行。草稿尚未启动。', 'WorkflowToolModeUnsupported')
+}
+
 /** Host state is private; project files and commands use only the parent's scoped providers. */
 export async function createWorkflowManager(ctx, options = {}) {
   const directory = options.storeDir ?? join(process.env.DSH_HOME ?? join(homedir(), '.dsh'), 'composer-assist', 'workflows')
@@ -143,6 +151,7 @@ export async function createWorkflowManager(ctx, options = {}) {
     starting.set(meta.id, gate)
     try {
     const compiled = await requireCompiled(journal.getRun(meta.id)?.scriptText ?? meta.script)
+    if (!options.driverFactory) checkExecutionCapabilities(parent, meta.args?.preset)
     const routes = options.resolveRoutes ? await options.resolveRoutes(parent, meta, compiled.analysis) : resolveRoutes(parent, routingInput(parent, meta), compiled.analysis)
     checked(parent, meta.id)
     if (gate.cancelled) fail('工作流启动已经取消')

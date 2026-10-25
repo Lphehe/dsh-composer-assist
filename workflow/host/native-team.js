@@ -13,8 +13,8 @@ export function createNativeTeam(parent, config, callbacks) {
   const { journal, runId, signal, routes, cwd } = config
   const ctx = config.hostContext ?? parent.ctx
   const agents = ctx.get('agents')
-  const teams = ctx.get('agentTeams')
-  const subagents = ctx.get('subagents')
+  const teams = parent.ctx.get('agentTeams')
+  const subagents = parent.ctx.get('subagents')
   if (!teams || !subagents) throw new Error('动态工作流需要启用 DSH 原生 Teams 和标准子代理管理')
   const leadId = `dwf-team-${runId}`
   const provider = `composer-workflow-${runId}`

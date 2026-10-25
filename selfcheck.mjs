@@ -744,4 +744,19 @@ try {
   check.contextCache.clear()
 }
 
+{
+  const start = clientSource.indexOf('      const unit = (key, bounds, suffix, per = 1) => {')
+  const end = clientSource.indexOf("      return h('div', { style: { padding: embedded", start)
+  assert(start >= 0 && end > start)
+  const saved = []
+  const unit = runInNewContext(`(() => {${clientSource.slice(start, end)}; return unit })()`, {
+    current: { minConfidence: 0.6 }, selectStyle: {}, save: patch => saved.push(patch),
+    h: (type, props, ...children) => ({ type, props, children }),
+  })
+  const field = unit('minConfidence', [0, 1], '0–1').children[0]
+  assert.equal(field.props.value, 0.6)
+  assert.equal(field.props.max, 1)
+  field.props.onChange({ target: { value: '0.65' } })
+  assert.equal(saved[0].minConfidence, 0.65)
+}
 console.log('Composer context, ownership, hard deadlines, late-result rejection and per-call low-reasoning checks passed')

@@ -394,6 +394,7 @@ export function installWorkflowUI(ctx, React) {
     const [error, setError] = useState(''), [busy, setBusy] = useState(false)
     const [editorOpen, setEditorOpen] = useState(cached?.editorOpen ?? !runId)
     const [fusionOpen, setFusionOpen] = useState(cached?.fusionOpen ?? false)
+    const [fusionDraft, setFusionDraft] = useState(cached?.fusionDraft)
     const [modelRoute, setModelRoute] = useState(cached?.modelRoute ?? '')
     const [pageMore, setPageMore] = useState({})
     const [additionalNodes, setAdditionalNodes] = useState(null), [additionalEvents, setAdditionalEvents] = useState(null), [additionalReports, setAdditionalReports] = useState(null)
@@ -406,7 +407,7 @@ export function installWorkflowUI(ctx, React) {
     }, [navigation?.revision])
     const initialized = useRef(cached?.initialized ?? null)
     const editorSnapshot = useRef(null)
-    editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, fusionOpen, initialized: initialized.current } }
+    editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, fusionOpen, fusionDraft, initialized: initialized.current } }
     // The native main view unmounts on tab switches; keep unsaved authoring state.
     useEffect(() => () => { editorStates.set(sessionId, editorSnapshot.current) }, [sessionId])
     useEffect(() => {
@@ -507,7 +508,7 @@ export function installWorkflowUI(ctx, React) {
         (error || feed.error) && h('div', { className: 'caw-error', role: 'alert' }, error || feed.error, button(t('refresh'), () => feed.refresh(), busy)),
         selected && !run && !feed.error && h('div', { className: 'caw-empty', role: 'status' }, h('span', { className: 'caw-skeleton', 'aria-hidden': true }), h('span', { className: 'caw-skeleton', 'aria-hidden': true }), h('span', null, t('loading'))),
         h('div', { className: 'caw-body' },
-          fusionOpen && h('div', { id: 'fusion-composer-panel' }, h(FusionComposer, { modelRoutes: collection.modelRoutes ?? [], busy, onCreate: createFusion })),
+          fusionOpen && h('div', { id: 'fusion-composer-panel' }, h(FusionComposer, { modelRoutes: collection.modelRoutes ?? [], busy, onCreate: createFusion, draft: fusionDraft, onDraftChange: setFusionDraft })),
           run?.args?.preset === 'fusion.v1' && h(FusionSummary, { run, onDetails: inspectFusion }),
           editorOpen && h('section', { className: 'caw-editor', 'aria-label': t('authoring') }, h('div', { className: 'caw-editor-title' }, h('h3', null, t('authoring')), button(t('hideEditor'), () => setEditorOpen(false))), h('div', { className: 'caw-editor-fields' },
             h('label', null, t('name'), h('input', { value: name, onChange: event => setName(event.target.value), maxLength: 120 })),

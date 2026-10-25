@@ -14,14 +14,12 @@ export function createFusionView(React, { t, button }) {
   const statusText = (result, key) =>
     result === undefined ? t('fusionNotYet') : result ? t(key + 'Pass') : t(key + 'Fail')
 
-  function FusionComposer({ modelRoutes = [], busy = false, onCreate }) {
-    const [task, setTask] = useState('')
-    const [name, setName] = useState('')
-    const [leadModel, setLeadModel] = useState('')
-    const [sidekickModel, setSidekickModel] = useState('')
-    const [reviewModel, setReviewModel] = useState('')
-    const [testScript, setTestScript] = useState('selfcheck')
-    const [maxRounds, setMaxRounds] = useState('2')
+  function FusionComposer({ modelRoutes = [], busy = false, onCreate, draft, onDraftChange }) {
+    const [local, setLocal] = useState({ task: '', name: '', leadModel: '', sidekickModel: '', reviewModel: '', testScript: 'selfcheck', maxRounds: '2' })
+    const values = draft ?? local
+    const { task, name, leadModel, sidekickModel, reviewModel, testScript, maxRounds } = values
+    const update = key => value => (onDraftChange ?? setLocal)(previous => ({ ...local, ...previous, [key]: value }))
+    const setTask = update('task'), setName = update('name'), setLeadModel = update('leadModel'), setSidekickModel = update('sidekickModel'), setReviewModel = update('reviewModel'), setTestScript = update('testScript'), setMaxRounds = update('maxRounds')
     const create = () => {
       if (!task.trim()) return
       const payload = {
@@ -79,7 +77,8 @@ export function createFusionView(React, { t, button }) {
   function FusionSummary({ run, onDetails }) {
     const args = run?.args
     if (!args || args.preset !== 'fusion.v1') return null
-    const result = run.result
+    const evidence = (run.reports ?? []).map(row => row.item).filter(item => item?.preset === 'fusion.v1')
+    const result = run.result ?? evidence.reduce((latest, item) => item.rounds === latest.rounds ? { ...latest, ...item } : item, {})
     const tests = result?.test
     const review = result?.review
     const outcome = result?.success === undefined ? undefined : result.success === true

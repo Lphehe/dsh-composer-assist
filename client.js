@@ -1967,13 +1967,13 @@ window.__ModuleLoader__.load({
         },
         h('input', {
           type: 'number',
-          step: per === 1 ? 1 : 0.5,
+          step: key === 'minConfidence' ? 0.05 : per === 1 ? 1 : 0.5,
           min: bounds[0] / per, max: bounds[1] / per,
           value: shown,
           onChange: event => {
             const parsed = Number(event.target.value)
             if (!Number.isFinite(parsed)) return
-            void save({ [key]: Math.round(parsed * per) })
+            void save({ [key]: key === 'minConfidence' ? parsed : Math.round(parsed * per) })
           },
           style: { ...selectStyle, width: '110px', minWidth: '110px', textAlign: 'right' },
         }),
@@ -2039,7 +2039,7 @@ window.__ModuleLoader__.load({
             unit('maxInputChars', [1000, 100000], 'chars')),
           settingRow(
             t('settings.minConfidence'), t('settings.minConfidenceHint'),
-            unit('minConfidence', [0, 1], '0–1', 0.1))),
+            unit('minConfidence', [0, 1], '0–1'))),
 
         // One way back: a mistyped budget or timeout had no undo except remembering the
         // old number. Values come from the Host's own DEFAULTS, not a client copy.

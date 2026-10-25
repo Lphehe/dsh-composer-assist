@@ -29,7 +29,7 @@ export function resolveRoutes(parent, input, analysis) {
   // objective, pick by what this machine actually observed. input.stats is the
   // recorder from manager.js; without it, or without any observation, the first
   // authorised route wins — never a guess.
-  const selected = input.objective && input.objective !== 'none' && Array.isArray(input.stats?.candidates)
+  const selected = savedPolicy?.enabled && input.objective && input.objective !== 'none' && Array.isArray(input.stats?.candidates)
     ? pickRoute(input.stats.candidates, { objective: input.objective, stats: input.stats })
     : undefined
   const choose = (provider, model, explicit) => {
@@ -38,8 +38,9 @@ export function resolveRoutes(parent, input, analysis) {
   }
   if ((input.provider === undefined) !== (input.model === undefined)) throw new Error('provider 和 model 必须同时指定')
   const chosen = selected ?? defaultRoute
-  const base = input.routePin?.base ?? choose(input.provider ?? chosen.provider, input.model ?? chosen.model, input.provider !== undefined || savedPolicy?.enabled === true)
-  const bindings = { ...(input.routePin?.bindings ?? {}) }
+  const recheckPin = route => { choose(route.provider, route.model, savedPolicy?.enabled === true || route.provider !== inherited.provider || route.model !== inherited.model); return route }
+  const base = input.routePin?.base ? recheckPin(input.routePin.base) : choose(input.provider ?? chosen.provider, input.model ?? chosen.model, input.provider !== undefined || savedPolicy?.enabled === true)
+  const bindings = Object.fromEntries(Object.entries(input.routePin?.bindings ?? {}).map(([name, route]) => [name, recheckPin(route)]))
   for (const reference of analysis.modelReferences ?? []) {
     const name = reference.name ?? reference.model
     if (bindings[name] !== undefined) continue
@@ -94,6 +95,7 @@ export function createDshDriver(parent, config) {
     const deniedGlobals = ctx.get('tools').schemas().map(tool => tool.name).filter(name => !inheritedTools.has(name))
     if (deniedGlobals.length) childCtx.get('tools').restrict({ deny: deniedGlobals })
     const readOnlyFusionReviewer = typeof persona.system === 'string' && persona.system.startsWith('[fusion-review-only:v1]')
+    if (readOnlyFusionReviewer) childCtx.effect(() => childCtx.get('tools').presentAs('native'))
     const stagedSubmits = new Map()
     const pendingTools = new Map()
     let nestedSubmit

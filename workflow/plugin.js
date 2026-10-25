@@ -2,7 +2,7 @@ import { FACADE_DTS, SNIPPET_FACADE_DTS } from '@zcode/dynamic-workflow'
 import { createWorkflowManager } from './host/manager.js'
 import { createFusionDraft } from './host/fusion-template.js'
 
-export const inject = ['tools', 'agents', 'agentTeams', 'subagents', 'connection', 'systemPrompt', 'fs', 'shell', 'jobs', 'sandboxPolicy', 'sessions', 'sessionQuery', 'sessionPersistence', 'agentPresets']
+export const inject = ['tools', 'agents', 'connection', 'systemPrompt']
 const API = '/api/composer-assist/workflow'
 const actions = ['help', 'analyze', 'create', 'fusion_create', 'list', 'get', 'stop', 'resume', 'amend', 'save', 'list_saved', 'run_saved', 'answer', 'resolve_hold', 'fill_hole', 'nodes', 'events', 'reports']
 const text = value => [{ type: 'text', text: JSON.stringify(value) }]
@@ -115,7 +115,7 @@ export async function apply(ctx) {
         const id = url.searchParams.get('id')
         return response(200, { ok: true, value: id === null ? {
           runs: await manager.list(parent), workflows: await manager.listSaved(parent),
-          modelRoutes: parent.ctx.get('subagentModelSelection')?.current()?.allowedModels ?? [],
+          modelRoutes: parent.ctx.get('subagentModelSelection')?.current()?.enabled === true ? parent.ctx.get('subagentModelSelection').current().allowedModels : [],
         } : await manager.get(parent, id) })
       } catch (error) { return response(400, { ok: false, error: error.message }) }
     },

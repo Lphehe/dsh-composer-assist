@@ -7,7 +7,7 @@ const React = {
   useState(initial) {
     const index = cursor++
     if (!(index in hooks)) hooks[index] = initial
-    return [hooks[index], value => { hooks[index] = value }]
+    return [hooks[index], value => { hooks[index] = typeof value === 'function' ? value(hooks[index]) : value }]
   },
 }
 const h = React.createElement
@@ -68,4 +68,14 @@ const contradictory = view.FusionSummary({ run: { ...run, result: { ...run.resul
 assert(flatten(contradictory).some(row => row.type === 'span' && row.children.includes('fusionReviewFail')), 'blocking issues must override an LLM approval vote')
 assert(nodes.some(row => row.type === 'button' && row.children.includes('fusionInspect')))
 assert.equal(view.FusionSummary({ run: { args: {} } }), null)
+const live = view.FusionSummary({ run: { ...run, status: 'stopped', result: undefined, reports: [{ item: { preset: 'fusion.v1', rounds: 1, test: { exitCode: 1 }, review: { approved: false, blockingIssues: ['Real test failure'] } } }] }, onDetails: () => {} })
+assert(flatten(live).some(row => row.type === 'li' && row.children.includes('Real test failure')))
+assert(flatten(live).some(row => row.type === 'span' && row.children.includes('fusionTestFail (1)')))
+let draft
+hooks = []; cursor = 0
+tree = render({ ...props, draft, onDraftChange: update => { draft = update(draft) } })
+control(tree, 'fusion-task').props.onChange({ target: { value: 'Keep this task' } })
+hooks = []
+tree = render({ ...props, draft })
+assert.equal(control(tree, 'fusion-task').props.value, 'Keep this task')
 console.log('Fusion workflow UI interaction selfcheck passed')

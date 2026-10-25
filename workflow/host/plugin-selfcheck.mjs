@@ -4,6 +4,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { apply } from '../plugin.js'
 import { createCompilerScope } from './compile.js'
+import { checkExecutionCapabilities } from './manager.js'
+assert.throws(() => checkExecutionCapabilities({ ctx: { get: () => undefined } }), /缺少工作流执行能力/)
+assert.throws(() => checkExecutionCapabilities({ ctx: { get: () => ({ schemas: () => [{ name: 'run_code' }] }) } }, 'fusion.v1'), /原生工具模式/)
+assert.doesNotThrow(() => checkExecutionCapabilities({ ctx: { get: () => ({ schemas: () => [{ name: 'run_code' }] }) } }))
+assert.doesNotThrow(() => checkExecutionCapabilities({ ctx: { get: () => ({ schemas: () => [{ name: 'bash' }] }) } }))
 import { graphModel, graphEdgePoints, nodeState, phaseModel } from '../client/graph.js'
 
 const separate = (a, b) => a.x + a.width <= b.x || b.x + b.width <= a.x || a.y + a.height <= b.y || b.y + b.height <= a.y
@@ -36,17 +41,23 @@ process.env.DSH_HOME = directory
 const disposers = []
 let tool
 let discovery
-const parent = { id: 'plugin-check', session: { header: { cwd: directory } } }
+const routes = new Map()
+let selection = { enabled: false, allowedModels: [{ provider: 'old', model: 'retained' }] }
+const parent = { id: 'plugin-check', session: { header: { cwd: directory } }, ctx: { get: name => name === 'subagentModelSelection' ? { current: () => selection } : undefined } }
 const ctx = {
   agents: { get: id => id === parent.id ? parent : undefined },
   tools: { register: definition => { tool = definition; return () => {} } },
-  connection: { fetch: { register: () => () => {} } },
+  connection: { fetch: { register: route => { routes.set(route.path, route); return () => {} } } },
   systemPrompt: { section: definition => { discovery = definition; return () => {} } },
   get: name => name === 'systemPrompt' ? ctx.systemPrompt : undefined,
   effect(factory) { const dispose = factory(); disposers.push(dispose); return dispose },
 }
 await apply(ctx)
 try {
+  const state = () => routes.get('/api/composer-assist/workflow/state').fetch(new Request('http://localhost/api/composer-assist/workflow/state?sessionId=plugin-check')).then(response => response.json())
+  assert.deepEqual((await state()).value.modelRoutes, [])
+  selection = { ...selection, enabled: true }
+  assert.deepEqual((await state()).value.modelRoutes, selection.allowedModels)
   assert.equal(tool.deferLoading, undefined, 'do not send an unsupported provider-specific defer flag')
   assert.match(tool.description, /action=help/)
   assert.match(discovery.text, /only when the user explicitly requests a workflow/)
