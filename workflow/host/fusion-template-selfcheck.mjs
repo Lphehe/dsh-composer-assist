@@ -12,6 +12,8 @@ assert.deepEqual(test.args, {
   timeoutMs: 180000,
   models: { lead: null, sidekick: null, reviewer: null },
 })
+assert(test.script.includes('[fusion-lead-only:v1]'), 'planning must not mutate the workspace')
+assert(test.script.includes('never perform a future attempt inside this ask'), 'feedback rounds belong to the workflow')
 assert.equal(test.concurrency, 3)
 for (const role of ['Fusion Lead', 'Fusion Sidekick', 'Fusion Reviewer']) {
   assert(test.script.includes('agent("' + role + '"'), role + ' should be an independent session')

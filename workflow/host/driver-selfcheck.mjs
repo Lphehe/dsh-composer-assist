@@ -21,7 +21,8 @@ async function check(mode) {
   registry.set(parent.id, parent)
   registry.set('unrelated', { id: 'unrelated' })
   const presets = new WeakSet()
-  const services = { sandboxPolicy: { overrideOf: () => 'read-only' }, approval: {}, permissionPresets: { current: () => 'auto' }, agentPresets: { composeFrom(scope) { if (presets.has(scope)) throw new Error('Child already joined a preset'); presets.add(scope) }, composedPreset: () => undefined }, subagentModelSelection: { current: () => ({ enabled: true, allowedModels: [{ provider: 'child-provider', model: 'child-model' }] }) } }
+  const sandboxMode = mode === 'workspace' ? 'workspace-write' : 'read-only'
+  const services = { sandboxPolicy: { overrideOf: () => sandboxMode, resolve: () => ({ mode: sandboxMode }) }, approval: {}, permissionPresets: { current: () => 'auto' }, agentPresets: { composeFrom(scope) { if (presets.has(scope)) throw new Error('Child already joined a preset'); presets.add(scope) }, composedPreset: () => undefined }, subagentModelSelection: { current: () => ({ enabled: true, allowedModels: [{ provider: 'child-provider', model: 'child-model' }] }) } }
   let finished
   let nativeRelease = false
   let requests = 0
@@ -102,10 +103,14 @@ async function check(mode) {
             }
             assert.ok(definitions.has('submit_result'), 'typed tools must exist before the first native request')
             for (const name of ['spawn_teammate', 'team_task_update', 'zcode_workflow']) assert.ok(guards.some(guard => guard({ name })), 'actors cannot bypass engine-owned admission')
-            if (mode === 'reviewer') {
+            if (mode === 'workspace') {
+              assert.ok(guards.every(guard => guard({ name: 'write', arguments: { sandbox_permissions: 'workspace-write' } }) === undefined))
+              for (const sandbox_permissions of ['danger-full-access', 'unknown']) assert.ok(guards.some(guard => guard({ name: 'write', arguments: { sandbox_permissions } })))
+            }
+            if (mode === 'reviewer' || mode === 'lead') {
               assert.ok(trace.includes('native-reviewer'))
               for (const name of ['write', 'bash', 'run_code']) assert.ok(guards.some(guard => guard({ name })), `Reviewer must deny ${name}`)
-              assert.ok(guards.every(guard => guard({ name: 'read' }) === undefined))
+              for (const name of ['read', 'skill']) assert.ok(guards.every(guard => guard({ name }) === undefined))
             }
             if (mode === 'unknown-mutation') await execute('write', { path: 'x' }, true)
             await execute('submit_result', { value: { ok: true } }, mode === 'post-error')
@@ -224,12 +229,12 @@ async function check(mode) {
       return
     }
     const before = requests
-    const session = await driver.createActorSession(actor, { name: 'worker', ...(mode === 'reviewer' ? { system: '[fusion-review-only:v1] audit only' } : {}) })
+    const session = await driver.createActorSession(actor, { name: 'worker', ...(['reviewer', 'lead'].includes(mode) ? { system: mode === 'lead' ? '[fusion-lead-only:v1] plan only' : '[fusion-review-only:v1] audit only' } : {}) })
     assert.equal(requests, before, 'coordinator and actor initialization must make zero model requests')
     if (sessionId) assert.equal(session.id, sessionId, 'resume must retain the exact original native member')
     sessionId = session.id
     assert.ok(trace.includes(`catalog:${session.id}`))
-    for (const [type, field, value] of [['approval/policy', 'policy', 'never'], ['sandbox/mode', 'mode', 'read-only']]) assert.ok(persisted.get(session.id).some(event => event.type === type && event.data[field] === value))
+    for (const [type, field, value] of [['approval/policy', 'policy', 'never'], ['sandbox/mode', 'mode', sandboxMode]]) assert.ok(persisted.get(session.id).some(event => event.type === type && event.data[field] === value))
     for (let ask = 0; ask < 2; ask++) {
       const instance = { siteId: `ask#${round * 2 + ask + 1}`, ordinal: 1 }
       journal.putNode({ runId: mode, ...instance, actorSiteId: actor.siteId, actorOrdinal: actor.ordinal, actorSeq: round * 2 + ask, kind: 'ask', inputHash: 'x', status: 'running' })
@@ -263,5 +268,5 @@ async function check(mode) {
   assert.ok([...board.values()].every(row => row.status === (mode === 'post-error' ? 'pending' : 'completed')))
   if (mode === 'unknown-mutation') assert.ok([...effects.values()].every(row => row.state === 'unknown'))
 }
-for (const mode of ['success', 'post-error', 'unknown-mutation', 'capacity', 'reviewer']) await check(mode)
+for (const mode of ['success', 'post-error', 'unknown-mutation', 'capacity', 'reviewer', 'lead', 'workspace']) await check(mode)
 console.log('driver selfcheck passed: native Teams/provider/catalog, cold typed asks, run resume/member identity, authoritative task completion, capacity refusal, policy/model inheritance and owned cleanup')

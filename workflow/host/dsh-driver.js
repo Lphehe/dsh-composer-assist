@@ -6,7 +6,7 @@ import { createNativeTeam } from './native-team.js'
 import { pickRoute } from './model-stats.js'
 
 const textBlock = text => [{ type: 'text', text }]
-const READ_TOOLS = new Set(['read', 'read_image', 'glob', 'grep', 'web_search', 'web_fetch', 'list_agents', 'team_task_list', 'team_task_get', 'job_output', 'job_list', 'tool_help', 'cordis_inspect_list', 'cordis_inspect_query', 'session_search', 'session_event_search', 'session_event_read', 'get_goal'])
+const READ_TOOLS = new Set(['skill', 'read', 'read_image', 'glob', 'grep', 'web_search', 'web_fetch', 'list_agents', 'team_task_list', 'team_task_get', 'job_output', 'job_list', 'tool_help', 'cordis_inspect_list', 'cordis_inspect_query', 'session_search', 'session_event_search', 'session_event_read', 'get_goal'])
 const err = error => error instanceof WorkflowError ? error : new WorkflowError('DriverError', error instanceof Error ? error.message : String(error))
 
 export function parentRoute(parent) {
@@ -94,12 +94,12 @@ export function createDshDriver(parent, config) {
     const inheritedTools = new Set(ctx.get('tools').schemas(parent).map(tool => tool.name))
     const deniedGlobals = ctx.get('tools').schemas().map(tool => tool.name).filter(name => !inheritedTools.has(name))
     if (deniedGlobals.length) childCtx.get('tools').restrict({ deny: deniedGlobals })
-    const readOnlyFusionReviewer = typeof persona.system === 'string' && persona.system.startsWith('[fusion-review-only:v1]')
-    if (readOnlyFusionReviewer) childCtx.effect(() => childCtx.get('tools').presentAs('native'))
+    const readOnlyFusionActor = typeof persona.system === 'string' && ['[fusion-review-only:v1]', '[fusion-lead-only:v1]'].some(prefix => persona.system.startsWith(prefix))
+    if (readOnlyFusionActor) childCtx.effect(() => childCtx.get('tools').presentAs('native'))
     const stagedSubmits = new Map()
     const pendingTools = new Map()
     let nestedSubmit
-    childCtx.get('systemPrompt').section({ name: `workflow:${runId}:persona`, order: 80, text: `You are workflow actor ${persona.name ?? refToString(actor)}. Keep your conversation across asks. Work only on your current ask. Use submit_result for a typed answer and escalate for a blocking question. All inherited permissions, tool guards and model restrictions apply. Never retry an operation whose external outcome is unknown.\n${persona.system ?? ''}` })
+    childCtx.get('systemPrompt').section({ name: `workflow:${runId}:persona`, order: 80, text: `You are workflow actor ${persona.name ?? refToString(actor)}. Keep your conversation across asks. Work only on your current ask. Use submit_result for a typed answer and escalate for a blocking question. All inherited permissions, tool guards and model restrictions apply. Omit sandbox_permissions when optional; if the tool schema requires it, use only the current sandbox mode and a non-empty justification. Correct argument-validation refusals, which have not executed the operation. Never retry a real sandbox denial or an operation whose external outcome is unknown.\n${persona.system ?? ''}` })
     if (overrides.sandboxMode !== undefined) child.session.append('sandbox/mode', { mode: overrides.sandboxMode, source: 'delegation' })
     if (overrides.approvalPolicy !== undefined) child.session.append('approval/policy', { policy: overrides.approvalPolicy, source: 'delegation' })
     if (overrides.permissionPreset !== undefined) child.session.append('permission/preset', { preset: overrides.permissionPreset })
@@ -107,8 +107,8 @@ export function createDshDriver(parent, config) {
       const state = activeState(child)
       if (!state) return '当前没有获准执行的工作流 ask'
       if (stagedSubmits.size || nestedSubmit || state.submitted !== undefined || state.accepted) return '当前 ask 已提交结果，等待引擎收口'
-      if (exec.arguments && typeof exec.arguments === 'object' && exec.arguments.sandbox_permissions !== undefined) return '工作流子代理不能扩大创建时的权限范围'
-      if (readOnlyFusionReviewer && !READ_TOOLS.has(exec.name) && !['submit_result', 'escalate'].includes(exec.name)) return 'Fusion Reviewer 是只读审查角色，不能执行修改类工具'
+      if (exec.arguments && typeof exec.arguments === 'object' && exec.arguments.sandbox_permissions !== undefined && exec.arguments.sandbox_permissions !== childCtx.get('sandboxPolicy').resolve({ session: child.session }).mode) return '工作流子代理不能扩大创建时的权限范围；请省略 sandbox_permissions，使用继承的工作区权限。此请求尚未执行。'
+      if (readOnlyFusionActor && !READ_TOOLS.has(exec.name) && !['submit_result', 'escalate'].includes(exec.name)) return `${persona.name} 是只读角色，不能执行修改类工具`
       if (['workflow', 'zcode_workflow', 'create_goal', 'ralph', 'plugin_manager', 'subagent', 'subagent_fork', 'subagent_codex', 'spawn_teammate', 'team_task_create', 'team_task_update', 'interrupt_agent'].includes(exec.name)) return '工作流的派发和任务状态由 ZCode 引擎管理；队友可通过 send_message 协作，不能启动第二套编排或修改环境'
       return undefined
     })

@@ -870,7 +870,7 @@ function pickRoute(routes, { objective, stats }) {
 
 // workflow/host/dsh-driver.js
 var textBlock = (text3) => [{ type: "text", text: text3 }];
-var READ_TOOLS = /* @__PURE__ */ new Set(["read", "read_image", "glob", "grep", "web_search", "web_fetch", "list_agents", "team_task_list", "team_task_get", "job_output", "job_list", "tool_help", "cordis_inspect_list", "cordis_inspect_query", "session_search", "session_event_search", "session_event_read", "get_goal"]);
+var READ_TOOLS = /* @__PURE__ */ new Set(["skill", "read", "read_image", "glob", "grep", "web_search", "web_fetch", "list_agents", "team_task_list", "team_task_get", "job_output", "job_list", "tool_help", "cordis_inspect_list", "cordis_inspect_query", "session_search", "session_event_search", "session_event_read", "get_goal"]);
 var err = (error) => error instanceof WorkflowError2 ? error : new WorkflowError2("DriverError", error instanceof Error ? error.message : String(error));
 function parentRoute(parent) {
   const header = parent.session.requestHeader()?.config;
@@ -960,12 +960,12 @@ function createDshDriver(parent, config) {
     const inheritedTools = new Set(ctx.get("tools").schemas(parent).map((tool) => tool.name));
     const deniedGlobals = ctx.get("tools").schemas().map((tool) => tool.name).filter((name) => !inheritedTools.has(name));
     if (deniedGlobals.length) childCtx.get("tools").restrict({ deny: deniedGlobals });
-    const readOnlyFusionReviewer = typeof persona.system === "string" && persona.system.startsWith("[fusion-review-only:v1]");
-    if (readOnlyFusionReviewer) childCtx.effect(() => childCtx.get("tools").presentAs("native"));
+    const readOnlyFusionActor = typeof persona.system === "string" && ["[fusion-review-only:v1]", "[fusion-lead-only:v1]"].some((prefix) => persona.system.startsWith(prefix));
+    if (readOnlyFusionActor) childCtx.effect(() => childCtx.get("tools").presentAs("native"));
     const stagedSubmits = /* @__PURE__ */ new Map();
     const pendingTools = /* @__PURE__ */ new Map();
     let nestedSubmit;
-    childCtx.get("systemPrompt").section({ name: `workflow:${runId}:persona`, order: 80, text: `You are workflow actor ${persona.name ?? refToString2(actor2)}. Keep your conversation across asks. Work only on your current ask. Use submit_result for a typed answer and escalate for a blocking question. All inherited permissions, tool guards and model restrictions apply. Never retry an operation whose external outcome is unknown.
+    childCtx.get("systemPrompt").section({ name: `workflow:${runId}:persona`, order: 80, text: `You are workflow actor ${persona.name ?? refToString2(actor2)}. Keep your conversation across asks. Work only on your current ask. Use submit_result for a typed answer and escalate for a blocking question. All inherited permissions, tool guards and model restrictions apply. Omit sandbox_permissions when optional; if the tool schema requires it, use only the current sandbox mode and a non-empty justification. Correct argument-validation refusals, which have not executed the operation. Never retry a real sandbox denial or an operation whose external outcome is unknown.
 ${persona.system ?? ""}` });
     if (overrides.sandboxMode !== void 0) child.session.append("sandbox/mode", { mode: overrides.sandboxMode, source: "delegation" });
     if (overrides.approvalPolicy !== void 0) child.session.append("approval/policy", { policy: overrides.approvalPolicy, source: "delegation" });
@@ -974,8 +974,8 @@ ${persona.system ?? ""}` });
       const state = activeState(child);
       if (!state) return "\u5F53\u524D\u6CA1\u6709\u83B7\u51C6\u6267\u884C\u7684\u5DE5\u4F5C\u6D41 ask";
       if (stagedSubmits.size || nestedSubmit || state.submitted !== void 0 || state.accepted) return "\u5F53\u524D ask \u5DF2\u63D0\u4EA4\u7ED3\u679C\uFF0C\u7B49\u5F85\u5F15\u64CE\u6536\u53E3";
-      if (exec.arguments && typeof exec.arguments === "object" && exec.arguments.sandbox_permissions !== void 0) return "\u5DE5\u4F5C\u6D41\u5B50\u4EE3\u7406\u4E0D\u80FD\u6269\u5927\u521B\u5EFA\u65F6\u7684\u6743\u9650\u8303\u56F4";
-      if (readOnlyFusionReviewer && !READ_TOOLS.has(exec.name) && !["submit_result", "escalate"].includes(exec.name)) return "Fusion Reviewer \u662F\u53EA\u8BFB\u5BA1\u67E5\u89D2\u8272\uFF0C\u4E0D\u80FD\u6267\u884C\u4FEE\u6539\u7C7B\u5DE5\u5177";
+      if (exec.arguments && typeof exec.arguments === "object" && exec.arguments.sandbox_permissions !== void 0 && exec.arguments.sandbox_permissions !== childCtx.get("sandboxPolicy").resolve({ session: child.session }).mode) return "\u5DE5\u4F5C\u6D41\u5B50\u4EE3\u7406\u4E0D\u80FD\u6269\u5927\u521B\u5EFA\u65F6\u7684\u6743\u9650\u8303\u56F4\uFF1B\u8BF7\u7701\u7565 sandbox_permissions\uFF0C\u4F7F\u7528\u7EE7\u627F\u7684\u5DE5\u4F5C\u533A\u6743\u9650\u3002\u6B64\u8BF7\u6C42\u5C1A\u672A\u6267\u884C\u3002";
+      if (readOnlyFusionActor && !READ_TOOLS.has(exec.name) && !["submit_result", "escalate"].includes(exec.name)) return `${persona.name} \u662F\u53EA\u8BFB\u89D2\u8272\uFF0C\u4E0D\u80FD\u6267\u884C\u4FEE\u6539\u7C7B\u5DE5\u5177`;
       if (["workflow", "zcode_workflow", "create_goal", "ralph", "plugin_manager", "subagent", "subagent_fork", "subagent_codex", "spawn_teammate", "team_task_create", "team_task_update", "interrupt_agent"].includes(exec.name)) return "\u5DE5\u4F5C\u6D41\u7684\u6D3E\u53D1\u548C\u4EFB\u52A1\u72B6\u6001\u7531 ZCode \u5F15\u64CE\u7BA1\u7406\uFF1B\u961F\u53CB\u53EF\u901A\u8FC7 send_message \u534F\u4F5C\uFF0C\u4E0D\u80FD\u542F\u52A8\u7B2C\u4E8C\u5957\u7F16\u6392\u6216\u4FEE\u6539\u73AF\u5883";
       return void 0;
     });
@@ -1812,13 +1812,13 @@ function createFusionDraft(input) {
     actor(
       "lead",
       "Fusion Lead",
-      "Plan the engineering work. Define testable acceptance criteria. Review the independent verification evidence before sign-off. Do not claim completion without proof.",
+      "[fusion-lead-only:v1] Only plan the work and review final evidence for sign-off. Use read-only tools. Do not implement changes, edit files or run tests; Sidekick implements and the workflow runs tests.",
       leadModel
     ),
     actor(
       "builder",
       "Fusion Sidekick",
-      "Implement the assigned change in the current workspace with minimal diffs. Use the inherited DSH tools and permissions. Return the files changed. Do not merge, push or deploy.",
+      "Implement only the current attempt from the ask payload. Return after this attempt; never perform a future attempt inside this ask, even if the task describes later rounds. The workflow owns test execution and independent review; use priorTest and priorReview only when supplied. Use inherited DSH tools and permissions. Return files changed. Do not merge, push or deploy.",
       sidekickModel
     ),
     actor(

@@ -1,0 +1,91 @@
+{
+  "schemaVersion": 1,
+  "date": "2026-10-26",
+  "profile": "fusion-pr16-20261026",
+  "runtime": "DSH 0.2.1-rc.3",
+  "sessionId": "fusion-pr16-acceptance-20261026",
+  "modelPolicy": "All roles inherited the already authorized parent route; no extra model authorization was granted.",
+  "model": { "provider": "magpie-responses", "model": "codex/gpt-6.1-sol" },
+  "firstLaunch": {
+    "runId": "b4629149-5739-4b1a-8906-d9285a7b62c4",
+    "humanConfirmedInWorkflowPanel": true,
+    "observedResult": { "success": false, "rounds": 2, "testExitCodes": [1, 1], "reviewApproved": false, "signoffApproved": false },
+    "rootCause": "The driver rejected sandbox_permissions=workspace-write even when it equalled the inherited effective workspace-write mode.",
+    "spentTokens": 501514
+  },
+  "guardFixContinuation": {
+    "action": "amend",
+    "runId": "56614568-6bee-452e-adc7-a60bd9baac25",
+    "success": true,
+    "workflowRounds": 1,
+    "testExitCode": 0,
+    "reviewApproved": true,
+    "signoffApproved": true,
+    "limitation": "The actors implemented multiple task-described rounds inside their own asks. This was not accepted as proof of a workflow-controlled two-round repair loop.",
+    "spentTokens": 575050
+  },
+  "strictFeedbackRun": {
+    "action": "amend",
+    "runId": "0754c1b5-5fc7-4125-93d6-9ee13e274fa4",
+    "teamSessionId": "dwf-team-0754c1b5-5fc7-4125-93d6-9ee13e274fa4",
+    "status": "completed",
+    "success": true,
+    "rounds": 2,
+    "actors": [
+      { "role": "Fusion Lead", "sessionId": "a2f3ec87-bdb7-436a-a5ed-4c99cccf5598", "access": "read-only guard" },
+      { "role": "Fusion Sidekick", "sessionId": "4cccd077-fd20-4f4b-84c9-a477a7e7a334", "access": "inherited workspace-write" },
+      { "role": "Fusion Reviewer", "sessionId": "3b9bc728-da15-4da8-b5f8-7e1c09eecff6", "access": "read-only guard" }
+    ],
+    "attempts": [
+      {
+        "attempt": 1,
+        "change": "sum.js: return Math.max(0, a) + Math.max(0, b)",
+        "test": { "command": "pnpm run selfcheck", "siteId": "world-read#1", "ordinal": 1, "kind": "world-run", "exitCode": 1, "failure": "sum(-2, 3): actual 3, expected 1" },
+        "review": { "siteId": "ask#3", "ordinal": 1, "approved": false, "blockingIssues": 2 }
+      },
+      {
+        "attempt": 2,
+        "change": "sum.js: Number.isFinite validation for both arguments, TypeError on invalid input, return a + b",
+        "test": { "command": "pnpm run selfcheck", "siteId": "world-read#1", "ordinal": 2, "kind": "world-run", "exitCode": 0, "stdout": "Five real arithmetic and validation assertions passed\n" },
+        "review": { "siteId": "ask#3", "ordinal": 2, "approved": true, "blockingIssues": 0 }
+      }
+    ],
+    "stopResume": {
+      "stoppedStatus": "stopped",
+      "holdsWhenStopped": [],
+      "resumedStatus": "running",
+      "sameRunId": true,
+      "sameActorSessionIds": true,
+      "finalTestNodeOrdinals": [1, 2],
+      "scope": "Orderly stop and resume in the same Host; no crash or unknown-effect resolution was injected."
+    },
+    "signoff": { "siteId": "ask#4", "approved": true },
+    "completedNodes": 10,
+    "reports": 4,
+    "artifacts": 0,
+    "holds": [],
+    "questions": [],
+    "spentTokens": 468552
+  },
+  "independentFinalCheck": {
+    "command": "git diff --exit-code -- test.mjs package.json && git diff --check && pnpm run selfcheck",
+    "exitCode": 0,
+    "stdout": "Five real arithmetic and validation assertions passed",
+    "changedFiles": ["sum.js"],
+    "fixtureHeadUnchanged": "87b894c"
+  },
+  "observedWorkflowTokensTotal": 1545116,
+  "moneyCostEstimated": false,
+  "runtimeBundlesSha256": {
+    "dist/client.js": "a4686e2a645a5e380aa5e64a85bfc41152f9853ec2e8bb41a032e8983ddee88a",
+    "dist/workflow-host.js": "0e58bf346b94e6367986fd71f6b87126a04d8cd1233dd8d4454d2c5806667063",
+    "dist/compiler-worker.js": "09b2a74173d4b8f4bc045a966c2578912940553447c6143e7a3419181dd5781d"
+  },
+  "notVerified": [
+    "Different providers/models across the three roles",
+    "Real unknown-effect resolution and process-crash recovery",
+    "Browser Tab-acceptance of the separately verified non-empty composer completion",
+    "PTC Fusion command transport (explicitly unsupported)",
+    "Production replacement, npm publication and migration of the unrelated dirty development worktree"
+  ]
+}
