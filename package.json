@@ -1,6 +1,6 @@
 {
   "name": "dsh-composer-assist",
-  "version": "0.7.4",
+  "version": "0.7.5",
   "description": "Context-aware composer prediction for DeepSeek Harness: predicts the next message after each turn, completes a draft while typing, and rewrites a prompt on demand; multiple searchable candidates, per-session suggestions, and supersede-safe responses.",
   "repository": {
     "type": "git",

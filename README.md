@@ -28,7 +28,7 @@ Tab accepts a suggestion (fills the draft, does not send); Esc hides it; the dis
 
 ## 安装 · Install
 
-已发布到 npm，直接装即可（当前版本 **0.7.4**）：
+已发布到 npm，直接装即可（当前版本 **0.7.5**）：
 
 ```bash
 dsh plugin --profile desktop add dsh-composer-assist@latest
@@ -36,7 +36,7 @@ dsh plugin --profile desktop add dsh-composer-assist@latest
 
 或在 DSH 的「插件」页安装 `dsh-composer-assist`，再在插件列表里启用。
 
-Install from npm (current version **0.7.4**):
+Install from npm (current version **0.7.5**):
 
 ```bash
 dsh plugin --profile desktop add dsh-composer-assist@latest
