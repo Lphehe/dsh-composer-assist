@@ -1,6 +1,6 @@
 # Fusion recipe (experimental, isolated workflow module)
 
-This repository's npm package **dsh-composer-assist@0.7.5 does not ship workflow/**. This recipe is **not** available when users install the normal composer-prediction package. It is code for the separately installed/packaged ZCode workflow host, not a claim of a released DSH feature.
+**Released npm dsh-composer-assist@0.7.5 (main)** does not ship this module. **PR #16 development preview** now builds both the Cordis Workflow Host and the Fusion Client in the same locally installable bundle, but it is not merged/released or validated in a signed DSH desktop. See [preview install guide](../../docs/fusion-preview-install.md).
 
 ## Fusion UI (isolated workflow view)
 
@@ -13,7 +13,7 @@ The retained native Workflow tab now includes a **Fusion** entry next to **New**
 
 Colors and typography use the existing DSH host tokens. Narrow windows collapse role cards into a single column. Labels are available in Chinese and English.
 
-**Shipping caveat:** This UI lives in `workflow/client/ui.js` and `workflow/client/fusion.js`. It is **not currently wired into the released composer-prediction Client bundle**, because the Workflow extension remains isolated. UI unit tests and bundling checks cannot substitute for a signed DSH desktop smoke test.
+**Shipping caveat:** The development preview now injects this UI into `dist/client.js`, exports the bundled Workflow Host and ships the compiler Worker and ZCode dependencies. The released npm version is unchanged. CI checks do not substitute for a signed DSH desktop smoke test.
 
 ## What changed
 
@@ -53,7 +53,7 @@ Remove optional model fields to inherit the parent session's chosen subagent rou
 - Tests run in the inherited DSH sandbox and require the same permissions; scripts may have side effects. Inspect their content before confirming first launch.
 - The reviewer sees a Git diff, which does not include untracked file contents by default. Do not treat its approval as complete coverage; test failures and Lead sign-off remain separate gates.
 - Retry rounds are limited, and the tool intentionally does not auto-merge, push or deploy.
-- `workflow/` is currently excluded from the package exports and npm files. Activating it requires a separately reviewed DSH workflow packaging/integration step and a real-host smoke test.
+- The development preview includes `workflow/` and the compiled Host, Client, and Worker in the package. It remains **private/unpublished** pending the DSH real-host smoke test and migration review.
 - Template selfchecks are model-free. GitHub CI also builds the ZCode compiler and requires it to accept the generated Fusion script. **Neither check proves a successful paid Agent run or DSH desktop/Host integration.**
 
 Run unit check from repository root after installing dev dependencies:
