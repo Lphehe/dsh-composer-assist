@@ -89,7 +89,7 @@ gh pr create --repo awesome-dsh-plugin/awesome-dsh-plugin \
 
 ## 七、本插件当前状态
 
-- 条目文件：`lphehe-bot__dsh-composer-assist.yml`，分类 `usage`
+- 条目文件：`Lphehe__dsh-composer-assist.yml`，分类 `usage`
 - PR：[#9243](https://github.com/awesome-dsh-plugin/awesome-dsh-plugin/pull/9243)，`OPEN`，`mergeable`，CI 待跑
 - 前置条件已核对：仓库创建于 2026-10-22、带 `dsh-plugin` topic、`dsh.bundle.patch` 已声明、npm 已发布、无重复条目
 - 描述中 7 项功能声明（每轮预测／建议栏／多候选／输入补全／一键改写／Tab 接受／按会话保留）均已对照源码确认存在

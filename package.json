@@ -1,6 +1,15 @@
 {
   "name": "dsh-composer-assist",
   "version": "0.7.4",
+  "description": "Context-aware composer prediction for DeepSeek Harness: predicts the next message after each turn, completes a draft while typing, and rewrites a prompt on demand; multiple searchable candidates, per-session suggestions, and supersede-safe responses.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Lphehe/dsh-composer-assist.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Lphehe/dsh-composer-assist/issues"
+  },
+  "homepage": "https://github.com/Lphehe/dsh-composer-assist#readme",
   "packageManager": "pnpm@11.24.0",
   "scripts": {
     "build": "node scripts/build-client.mjs",
@@ -19,7 +28,6 @@
     "typescript": "5.9.3"
   },
   "type": "module",
-  "description": "Context-aware composer prediction for DeepSeek Harness: predicts the next message after each turn, completes a draft while typing, and rewrites a prompt on demand; multiple searchable candidates, per-session suggestions, and supersede-safe responses.",
   "license": "SEE LICENSE IN LICENSE",
   "exports": {
     ".": "./index.js",
