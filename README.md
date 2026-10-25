@@ -144,6 +144,12 @@ Inline rendering relies on the host's composer markers and native hint styles, w
 克隆仓库后运行 `pnpm run selfcheck`：它检查解析、学习统计、上下文失败降级，并确认提交的 `dist/` 与当前源码一致；不调用模型或改写用户设置。
 After cloning, run `pnpm run selfcheck`: it covers parsing, learning counters and context fallback, and verifies the committed `dist/` matches the current source. It does not call a model or change user settings.
 
+## 反馈 · Feedback
+
+问题、建议或使用疑问，欢迎加入 QQ 群 **1129389677**。
+
+Bugs, suggestions and usage questions: join the QQ group **1129389677**.
+
 ## 许可证 · License
 
 原创程序代码采用“源码可见、禁止修改”条款，并非开放源代码许可证。允许使用未经修改的版本；未经著作权人事先书面许可，不得修改本软件、制作衍生版本或分发修改版本。完整条款见 [LICENSE](LICENSE)。用户自己的配置、输入、输出和工作流脚本不受本项修改限制。
