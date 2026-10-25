@@ -3,3 +3,6 @@
 # binary, so approve exactly that one package instead of disabling the guard.
 allowBuilds:
   esbuild: true
+
+# Required for preview npm tarballs that bundle local ZCode runtime dependencies.
+nodeLinker: hoisted
