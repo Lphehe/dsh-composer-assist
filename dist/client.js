@@ -130,8 +130,8 @@
     const width = Math.max(296, ...nodes.map((node) => node.x + node.width + 24));
     return { nodes, edges, groups, width, height: Math.max(320, top + rowHeight + 16) };
   }
-  function graphEdgePoints(model, edge) {
-    const byId = new Map(model.nodes.map((node) => [node.id, node]));
+  function graphEdgePoints(model2, edge) {
+    const byId = new Map(model2.nodes.map((node) => [node.id, node]));
     const sides = (item) => {
       const from2 = byId.get(item.from), to2 = byId.get(item.to);
       if (from2 === to2) return ["right", "bottom"];
@@ -141,7 +141,7 @@
     };
     const port = (node, side, outgoing) => {
       const vertical = side === "left" || side === "right";
-      const peers = model.edges.flatMap((item, index2) => {
+      const peers = model2.edges.flatMap((item, index2) => {
         const pair2 = sides(item), entries = [];
         if (item.from === node.id && pair2[0] === side) entries.push({ item, index: index2, outgoing: true, other: byId.get(item.to) });
         if (item.to === node.id && pair2[1] === side) entries.push({ item, index: index2, outgoing: false, other: byId.get(item.from) });
@@ -160,12 +160,12 @@
     const start = port(from, pair[0], true), end = port(to, pair[1], false);
     const stub = (point, side) => [point[0] + (side === "right" ? 12 : side === "left" ? -12 : 0), point[1] + (side === "bottom" ? 12 : side === "top" ? -12 : 0)];
     const first = stub(start, pair[0]), last = stub(end, pair[1]);
-    const boxes = model.nodes.map((node) => ({ left: node.x - 6, right: node.x + node.width + 6, top: node.y - 6, bottom: node.y + node.height + 6 }));
+    const boxes = model2.nodes.map((node) => ({ left: node.x - 6, right: node.x + node.width + 6, top: node.y - 6, bottom: node.y + node.height + 6 }));
     const clear = (a, b) => !boxes.some((box) => a[0] === b[0] ? a[0] > box.left && a[0] < box.right && Math.max(a[1], b[1]) > box.top && Math.min(a[1], b[1]) < box.bottom : a[1] > box.top && a[1] < box.bottom && Math.max(a[0], b[0]) > box.left && Math.min(a[0], b[0]) < box.right);
     let route = [[first, [last[0], first[1]], last], [first, [first[0], last[1]], last]].find((points2) => points2.slice(1).every((point, i) => clear(points2[i], point)));
     if (!route) {
-      const xs = [.../* @__PURE__ */ new Set([8, model.width - 8, first[0], last[0], ...boxes.flatMap((box) => [box.left - 2, box.right + 2])])].sort((a, b) => a - b);
-      const ys = [.../* @__PURE__ */ new Set([8, model.height - 8, first[1], last[1], ...boxes.flatMap((box) => [box.top - 2, box.bottom + 2]), ...(model.groups ?? []).flatMap((group) => [group.y - 8, group.y + group.height + 8])])].sort((a, b) => a - b);
+      const xs = [.../* @__PURE__ */ new Set([8, model2.width - 8, first[0], last[0], ...boxes.flatMap((box) => [box.left - 2, box.right + 2])])].sort((a, b) => a - b);
+      const ys = [.../* @__PURE__ */ new Set([8, model2.height - 8, first[1], last[1], ...boxes.flatMap((box) => [box.top - 2, box.bottom + 2]), ...(model2.groups ?? []).flatMap((group) => [group.y - 8, group.y + group.height + 8])])].sort((a, b) => a - b);
       const key = (point2) => ys.indexOf(point2[1]) * xs.length + xs.indexOf(point2[0]);
       const point = (id) => [xs[id % xs.length], ys[Math.floor(id / xs.length)]];
       const source = key(first), target = key(last), costs = /* @__PURE__ */ new Map([[source, 0]]), parents = /* @__PURE__ */ new Map();
@@ -652,23 +652,23 @@
         return () => abort.abort();
       }, [sessionId, runId, item.id, preset, revision]);
       const spec = preset ? parseArtifactPresetSpec(kind, item.spec) : void 0;
-      const model = spec ? applyArtifactItems(kind, spec, entries.map((row, index) => ({ sequence: index, siteId: row.instance.siteId, ordinal: row.instance.ordinal, item: row.item }))) : void 0;
+      const model2 = spec ? applyArtifactItems(kind, spec, entries.map((row, index) => ({ sequence: index, siteId: row.instance.siteId, ordinal: row.instance.ordinal, item: row.item }))) : void 0;
       let body;
       if (kind === "markdown") body = code(item.content ?? "");
-      else if (model?.kind === "table") body = h(
+      else if (model2?.kind === "table") body = h(
         "table",
         null,
-        h("thead", null, h("tr", null, model.columns.map((col) => h("th", { key: col.field }, col.label, col.unit ? ` (${col.unit})` : "")))),
-        h("tbody", null, model.rows.map((row) => h("tr", { key: row.id }, row.cells.map((cell, index) => h("td", { key: index }, cell)))))
+        h("thead", null, h("tr", null, model2.columns.map((col) => h("th", { key: col.field }, col.label, col.unit ? ` (${col.unit})` : "")))),
+        h("tbody", null, model2.rows.map((row) => h("tr", { key: row.id }, row.cells.map((cell, index) => h("td", { key: index }, cell)))))
       );
-      else if (model?.kind === "metrics") body = h("div", { className: "caw-metrics" }, model.metrics.map((metric) => h(
+      else if (model2?.kind === "metrics") body = h("div", { className: "caw-metrics" }, model2.metrics.map((metric) => h(
         "div",
         { key: metric.field },
         h("span", null, metric.label),
         h("strong", null, metric.value ?? "\u2014"),
         metric.unit
       )));
-      else if (model?.kind === "board") body = h("div", { className: "caw-board" }, model.columns.map((column) => h(
+      else if (model2?.kind === "board") body = h("div", { className: "caw-board" }, model2.columns.map((column) => h(
         "section",
         { key: column.id },
         h("h4", null, column.other ? t("other") : column.id),
@@ -679,20 +679,20 @@
           card.details.map((detail, index) => h("p", { key: index }, `${detail.label}: ${detail.value}${detail.unit ? ` ${detail.unit}` : ""}`))
         ))
       )));
-      else if (model?.kind === "chart") {
-        const transform = (value) => model.scale === "log" ? Math.log10(value) : value;
-        const low = model.domain ? model.scale === "log" ? model.domain.yMin : Math.min(0, model.domain.yMin, model.baseline?.value ?? 0) : 0;
-        const high = Math.max(low, model.domain?.yMax ?? 1, model.baseline?.value ?? low);
+      else if (model2?.kind === "chart") {
+        const transform = (value) => model2.scale === "log" ? Math.log10(value) : value;
+        const low = model2.domain ? model2.scale === "log" ? model2.domain.yMin : Math.min(0, model2.domain.yMin, model2.baseline?.value ?? 0) : 0;
+        const high = Math.max(low, model2.domain?.yMax ?? 1, model2.baseline?.value ?? low);
         const min = transform(low), span = transform(high) - min || 1;
-        const xMin = model.domain?.xMin ?? 0, xSpan = (model.domain?.xMax ?? 1) - xMin || 1;
+        const xMin = model2.domain?.xMin ?? 0, xSpan = (model2.domain?.xMax ?? 1) - xMin || 1;
         const x = (point) => 50 + (point.x - xMin) / xSpan * 450;
         const y = (value) => 175 - (transform(value) - min) / span * 155;
         const colors = ["--dsw-alias-brand-primary", "--dsw-alias-state-success-primary", "--dsw-alias-state-warn-primary", "--dsw-alias-state-error-primary"];
         const table = h(
           "table",
           null,
-          h("thead", null, h("tr", null, h("th", null, model.x.label), model.series.map((series) => h("th", { key: series.key }, series.label)))),
-          h("tbody", null, model.points.map((point) => h("tr", { key: point.sequence }, h("td", null, point.xLabel), model.series.map((series) => h("td", { key: series.key }, String(point[series.key] ?? ""))))))
+          h("thead", null, h("tr", null, h("th", null, model2.x.label), model2.series.map((series) => h("th", { key: series.key }, series.label)))),
+          h("tbody", null, model2.points.map((point) => h("tr", { key: point.sequence }, h("td", null, point.xLabel), model2.series.map((series) => h("td", { key: series.key }, String(point[series.key] ?? ""))))))
         );
         body = h(
           React.Fragment,
@@ -703,25 +703,25 @@
             h("path", { d: "M45 10 V180 H520", fill: "none", stroke: "var(--dsw-alias-border-l2)" }),
             h("text", { x: 2, y: 20, fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, String(high)),
             h("text", { x: 2, y: 178, fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, String(low)),
-            model.baseline && h(
+            model2.baseline && h(
               "g",
               null,
-              h("path", { d: `M45 ${y(model.baseline.value)} H520`, stroke: "var(--dsw-alias-label-secondary)", strokeDasharray: "4 3" }),
-              h("text", { x: 50, y: y(model.baseline.value) - 4, fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, `${model.baseline.label}: ${model.baseline.value}`)
+              h("path", { d: `M45 ${y(model2.baseline.value)} H520`, stroke: "var(--dsw-alias-label-secondary)", strokeDasharray: "4 3" }),
+              h("text", { x: 50, y: y(model2.baseline.value) - 4, fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, `${model2.baseline.label}: ${model2.baseline.value}`)
             ),
-            model.series.map((series, index) => {
+            model2.series.map((series, index) => {
               const color = `var(${colors[index % colors.length]})`;
-              const points = model.points.filter((point) => typeof point[series.key] === "number");
+              const points = model2.points.filter((point) => typeof point[series.key] === "number");
               return h(
                 "g",
                 { key: series.key },
                 h("text", { x: 50 + index * 135, y: 225, fontSize: 11, fill: color }, series.label),
-                points.map((point) => model.type === "bar" ? h("rect", { key: point.sequence, x: x(point) - 5 + index * 7, y: Math.min(y(point[series.key]), y(model.scale === "log" ? low : 0)), width: 6, height: Math.abs(y(point[series.key]) - y(model.scale === "log" ? low : 0)), fill: color }, h("title", null, `${point.xLabel}: ${point[series.key]}`)) : h("circle", { key: point.sequence, cx: x(point), cy: y(point[series.key]), r: 3, fill: color }, h("title", null, `${point.xLabel}: ${point[series.key]}`))),
-                model.type === "line" && h("polyline", { points: points.map((point) => `${x(point)},${y(point[series.key])}`).join(" "), fill: "none", stroke: color, strokeWidth: 1.5 })
+                points.map((point) => model2.type === "bar" ? h("rect", { key: point.sequence, x: x(point) - 5 + index * 7, y: Math.min(y(point[series.key]), y(model2.scale === "log" ? low : 0)), width: 6, height: Math.abs(y(point[series.key]) - y(model2.scale === "log" ? low : 0)), fill: color }, h("title", null, `${point.xLabel}: ${point[series.key]}`)) : h("circle", { key: point.sequence, cx: x(point), cy: y(point[series.key]), r: 3, fill: color }, h("title", null, `${point.xLabel}: ${point[series.key]}`))),
+                model2.type === "line" && h("polyline", { points: points.map((point) => `${x(point)},${y(point[series.key])}`).join(" "), fill: "none", stroke: color, strokeWidth: 1.5 })
               );
             }),
-            model.points.length > 0 && h("text", { x: 50, y: 197, fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, model.points[0].xLabel),
-            model.points.length > 1 && h("text", { x: 515, y: 197, textAnchor: "end", fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, model.points.at(-1).xLabel)
+            model2.points.length > 0 && h("text", { x: 50, y: 197, fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, model2.points[0].xLabel),
+            model2.points.length > 1 && h("text", { x: 515, y: 197, textAnchor: "end", fontSize: 10, fill: "var(--dsw-alias-label-secondary)" }, model2.points.at(-1).xLabel)
           ),
           h("details", null, h("summary", null, t("details")), table)
         );
@@ -884,6 +884,225 @@
     return { FusionComposer, FusionSummary };
   }
 
+  // workflow/client/fusion-terminal.js
+  var short = (v, n = 120) => typeof v === "string" ? v.slice(0, n) : "";
+  var numeric = (v) => typeof v === "number" && Number.isFinite(v);
+  var roleName = (actor) => String(actor?.name ?? actor?.persona?.name ?? "").toLowerCase();
+  var roleActor = (run, key) => (run?.actors ?? []).find((a) => roleName(a).includes(key));
+  var model = (run, role) => {
+    const choice = run?.args?.models?.[role];
+    if (typeof choice === "string" && choice) return choice;
+    const actor = roleActor(run, role);
+    if (typeof actor?.resolvedModel === "string") {
+      try {
+        const parsed = JSON.parse(actor.resolvedModel);
+        if (parsed?.model) return (parsed.provider ? parsed.provider + "/" : "") + parsed.model;
+      } catch {
+      }
+      return actor.resolvedModel;
+    }
+    return null;
+  };
+  var actorState = (run, role) => {
+    const actor = roleActor(run, role);
+    if (!actor) return "pending";
+    const rows = (run?.nodes ?? []).filter((n) => n.kind === "ask" && n.actorSiteId === actor.siteId);
+    return rows.at(-1)?.status ?? "pending";
+  };
+  function fusionTerminalSnapshot(run) {
+    const evidence = (run?.reports ?? []).map((r) => r?.item).filter((i) => i?.preset === "fusion.v1");
+    const result = run?.result;
+    const last = evidence.at(-1);
+    const test = result?.test ?? [...evidence].reverse().find((i) => i?.test)?.test;
+    const review = result?.review ?? [...evidence].reverse().find((i) => i?.review)?.review;
+    const rounds = Number.isInteger(result?.rounds) ? result.rounds : Number.isInteger(last?.rounds) ? last.rounds : null;
+    const reviewState = review === void 0 ? "pending" : review.approved === true && Array.isArray(review.blockingIssues) && review.blockingIssues.length === 0 ? "completed" : "failed";
+    const tests = numeric(test?.exitCode) ? test.exitCode === 0 ? "completed" : "failed" : "pending";
+    return {
+      status: run?.status ?? "draft",
+      tokens: numeric(run?.spentTokens) ? run.spentTokens : null,
+      rounds,
+      maxRounds: Number.isInteger(run?.args?.maxRounds) ? run.args.maxRounds : null,
+      models: { lead: model(run, "lead"), sidekick: model(run, "sidekick"), reviewer: model(run, "reviewer") },
+      actors: { lead: actorState(run, "lead"), sidekick: actorState(run, "sidekick"), reviewer: actorState(run, "reviewer") },
+      tests,
+      testExit: numeric(test?.exitCode) ? test.exitCode : null,
+      review: reviewState,
+      signoff: result?.success === true ? "completed" : result?.success === false ? "failed" : "pending",
+      script: typeof run?.args?.testScript === "string" ? run.args.testScript : null,
+      blockers: Array.isArray(review?.blockingIssues) ? review.blockingIssues.slice(0, 4).map((x) => short(String(x))) : [],
+      logs: (run?.events ?? []).slice(-7).map((r, i) => ({
+        seq: r.sequence ?? i,
+        type: short(r.event?.type ?? r.type ?? "event", 45),
+        message: short(r.event?.message ?? r.event?.name ?? r.message ?? "", 110)
+      }))
+    };
+  }
+  var STYLE = `
+.caw-tty{--bg:#0b1018;--panel:#101722;--edge:#303d50;--ink:#dbe4f4;--muted:#9aaac4;--blue:#86adf6;--violet:#c9a8f3;--green:#7fe0ae;--amber:#e8ae90;background:var(--bg);color:var(--ink);border:1px solid var(--edge);border-radius:8px;overflow:hidden;font:12px/1.48 ui-monospace,SFMono-Regular,Consolas,monospace;min-width:0}
+.caw-tty *{box-sizing:border-box}
+.caw-tty .tty-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;padding:12px 15px;border-bottom:1px solid var(--edge);letter-spacing:.07em}
+.caw-tty .tty-title{font-weight:700;color:var(--green)}
+.caw-tty .tty-metrics{display:flex;flex-wrap:wrap;gap:8px;color:var(--muted);font-size:11px}
+.caw-tty .tty-pill{border:1px solid var(--edge);padding:3px 7px;border-radius:3px}
+.caw-tty .tty-scene{display:grid;grid-template-columns:minmax(170px,.6fr) minmax(0,2fr);gap:16px;padding:16px}
+.caw-tty .tty-aside{border:1px solid #725e9f;background:#141322;padding:14px;display:flex;flex-direction:column;gap:10px;min-height:340px}
+.caw-tty .tty-label{font-size:10px;letter-spacing:.11em;color:var(--muted);text-transform:uppercase}
+.caw-tty .tty-name{font-weight:700;font-size:13px;overflow-wrap:anywhere}
+.caw-tty .tty-aside .tty-name{color:var(--violet)}
+.caw-tty .tty-model{font-size:11px;color:var(--muted);overflow-wrap:anywhere}
+.caw-tty .tty-oversight{margin-top:auto;padding-top:12px;border-top:1px solid #3e334e}
+.caw-tty .tty-flow{display:flex;flex-direction:column;align-items:center;min-width:0}
+.caw-tty .tty-node{border:1px solid var(--edge);padding:11px 10px;background:var(--panel);text-align:center;min-width:0;width:min(100%,290px)}
+.caw-tty .tty-implement{border-color:#ab7960}
+.caw-tty .tty-implement .tty-name{color:var(--amber)}
+.caw-tty .tty-gate{border-color:#4f967b;background:#10201d}
+.caw-tty .tty-gate .tty-name{color:var(--green)}
+.caw-tty .tty-branch{width:100%;display:flex;gap:8px;max-width:630px}
+.caw-tty .tty-branch .tty-node{flex:1;width:auto;border-color:#58759d;padding:9px 5px}
+.caw-tty .tty-branch .tty-name{color:var(--blue);font-size:12px}
+.caw-tty .tty-spine{width:1px;height:24px;background:var(--edge);position:relative}
+.caw-tty .tty-spine:before{content:"";position:absolute;top:0;left:-2px;background:var(--blue);width:5px;height:5px;border-radius:50%}
+.caw-tty[data-status=running] .tty-spine:before{animation:tty-flow 1.55s linear infinite}
+.caw-tty .tty-fork{height:20px;width:78%;border-top:1px solid var(--edge);border-left:1px solid var(--edge);border-right:1px solid var(--edge);margin-top:7px}
+.caw-tty .tty-join{height:20px;width:78%;border-bottom:1px solid var(--edge);border-left:1px solid var(--edge);border-right:1px solid var(--edge)}
+.caw-tty .tty-return{border:1px solid #826554;padding:7px 12px;background:#1d1717;color:var(--amber);font-size:11px;text-align:center}
+.caw-tty .tty-state{font-size:10px;color:var(--muted);margin-top:4px}
+.caw-tty .tty-state[data-status=completed]{color:var(--green)}
+.caw-tty .tty-state[data-status=failed]{color:var(--amber)}
+.caw-tty .tty-gauge{display:flex;height:5px;gap:2px;background:#2d3b38;margin-top:9px}
+.caw-tty .tty-gauge span{flex:1;background:#3d665a}
+.caw-tty .tty-gauge span[data-done=true]{background:var(--green)}
+.caw-tty .tty-console{border-top:1px solid var(--edge);padding:12px 15px;background:#0e141e}
+.caw-tty .tty-console-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:10px}
+.caw-tty .tty-console button{border:1px solid var(--edge);color:var(--blue);font:inherit;font-size:11px;padding:3px 9px;background:#172335;cursor:pointer;border-radius:3px}
+.caw-tty .tty-log{display:grid;grid-template-columns:50px minmax(80px,125px) minmax(0,1fr);gap:8px;border-bottom:1px solid #1d2836;padding:3px 0;color:var(--muted);font-size:11px}
+.caw-tty .tty-log code{color:var(--blue);overflow-wrap:anywhere}
+.caw-tty .tty-log span:last-child{overflow-wrap:anywhere}
+.caw-tty .tty-alert{border-left:2px solid var(--amber);margin-top:10px;padding:3px 9px;color:var(--amber);overflow-wrap:anywhere}
+.caw-tty .tty-footnote{color:var(--muted);font-size:10px;margin-top:8px}
+@keyframes tty-flow{from{transform:translateY(0);opacity:.5}to{transform:translateY(22px);opacity:0}}
+@container(max-width:760px){.caw-tty .tty-scene{grid-template-columns:1fr}.caw-tty .tty-aside{min-height:auto}}
+@container(max-width:470px){.caw-tty .tty-scene{padding:10px}.caw-tty .tty-branch{flex-direction:column}.caw-tty .tty-fork,.caw-tty .tty-join{display:none}.caw-tty .tty-log{grid-template-columns:50px 1fr}.caw-tty .tty-log span:last-child{grid-column:2}}
+@media(prefers-reduced-motion:reduce){.caw-tty .tty-spine:before{animation:none!important}}
+`;
+  function createFusionTerminalView(React, { t, button }) {
+    const h = React.createElement;
+    const state = (s) => h("span", { className: "tty-state", "data-status": s }, t(s ?? "unknown"));
+    const role = (caption, model2, status) => h(
+      "div",
+      { className: "tty-node" },
+      h("div", { className: "tty-name" }, caption),
+      h("div", { className: "tty-model" }, model2 ?? t("fusionTerminalUnknown")),
+      state(status)
+    );
+    const line = () => h("div", { className: "tty-spine", "aria-hidden": true });
+    function FusionTerminal({ run, onLogs }) {
+      if (run?.args?.preset !== "fusion.v1") return null;
+      const d = fusionTerminalSnapshot(run);
+      const rounds = d.maxRounds ? Array.from({ length: Math.min(3, d.maxRounds) }, (_, i) => i < (d.rounds ?? 0)) : [];
+      return h(
+        "section",
+        { className: "caw-tty", "data-fusion-terminal": "", "data-status": d.status, "aria-label": t("fusionTerminalTitle") },
+        h("style", null, STYLE),
+        h(
+          "header",
+          { className: "tty-head" },
+          h("span", { className: "tty-title" }, "\u25A3  " + t("fusionTerminalTitle")),
+          h(
+            "div",
+            { className: "tty-metrics" },
+            h("span", { className: "tty-pill" }, t(d.status)),
+            h("span", { className: "tty-pill" }, t("fusionRounds") + ": " + (d.rounds ?? "\u2014") + "/" + (d.maxRounds ?? "\u2014")),
+            h("span", { className: "tty-pill" }, t("tokens") + ": " + (d.tokens === null ? "\u2014" : d.tokens.toLocaleString()))
+          )
+        ),
+        h(
+          "div",
+          { className: "tty-scene" },
+          h(
+            "aside",
+            { className: "tty-aside" },
+            h("div", { className: "tty-label" }, t("fusionTerminalOversight")),
+            h("div", { className: "tty-name" }, "LEAD / " + t("fusionTerminalDecision")),
+            h("div", { className: "tty-model" }, d.models.lead ?? t("fusionTerminalUnknown")),
+            state(d.actors.lead),
+            h(
+              "div",
+              { className: "tty-oversight" },
+              h("div", { className: "tty-label" }, t("fusionTerminalSignoff")),
+              state(d.signoff),
+              h("p", { className: "tty-model" }, t("fusionTerminalNotAdvisor"))
+            )
+          ),
+          h(
+            "div",
+            { className: "tty-flow" },
+            h("div", { className: "tty-label" }, t("fusionTerminalExecution")),
+            h(
+              "div",
+              { className: "tty-node tty-implement" },
+              h("div", { className: "tty-name" }, "SIDEKICK / " + t("fusionTerminalBuild")),
+              h("div", { className: "tty-model" }, d.models.sidekick ?? t("fusionTerminalUnknown")),
+              state(d.actors.sidekick)
+            ),
+            line(),
+            h(
+              "div",
+              { className: "tty-node tty-gate" },
+              h("div", { className: "tty-name" }, t("fusionTerminalGate")),
+              h("div", { className: "tty-model" }, d.script ? "pnpm run " + d.script : t("fusionTerminalUnknown")),
+              state(d.tests),
+              d.testExit !== null && h("div", { className: "tty-state" }, "exit " + d.testExit),
+              rounds.length > 0 && h(
+                "div",
+                { className: "tty-gauge", "aria-label": t("fusionRounds") },
+                rounds.map((done, i) => h("span", { key: i, "data-done": done }))
+              )
+            ),
+            line(),
+            h("div", { className: "tty-label" }, t("fusionTerminalParallel")),
+            h("div", { className: "tty-fork", "aria-hidden": true }),
+            h(
+              "div",
+              { className: "tty-branch" },
+              role(t("fusionTerminalPlan"), d.models.lead, d.actors.lead),
+              role(t("fusionTerminalTest"), d.script ? "pnpm run " + d.script : null, d.tests),
+              role(t("fusionTerminalReview"), d.models.reviewer, d.review)
+            ),
+            h("div", { className: "tty-join", "aria-hidden": true }),
+            line(),
+            h("div", { className: "tty-return" }, t("fusionTerminalReturn") + " \xB7 " + t(d.signoff))
+          )
+        ),
+        h(
+          "div",
+          { className: "tty-console" },
+          h(
+            "div",
+            { className: "tty-console-head" },
+            h("span", { className: "tty-label" }, t("fusionTerminalLogs")),
+            button(t("fusionInspect"), onLogs, false, false, { className: "tty-console-button" })
+          ),
+          d.logs.length ? d.logs.map((e) => h(
+            "div",
+            { className: "tty-log", key: e.seq },
+            h("span", null, "#" + e.seq),
+            h("code", null, e.type),
+            h("span", null, e.message || "\u2014")
+          )) : h("div", { className: "tty-model" }, t("fusionTerminalNoLogs")),
+          d.blockers.length > 0 && h(
+            "div",
+            { className: "tty-alert", role: "status" },
+            t("fusionBlockingIssues") + ": " + d.blockers.join(" \xB7 ")
+          ),
+          h("div", { className: "tty-footnote" }, t("fusionTerminalEvidence"))
+        )
+      );
+    }
+    return { FusionTerminal };
+  }
+
   // workflow/client/navigation.js
   var WORKFLOW_VIEW_ID = "composer-assist-workflow";
   function workflowSelection(current, runs = []) {
@@ -1001,6 +1220,8 @@ return { finding, review };`;
   Object.assign(en, { "fusionOpen": "Fusion", "fusionTitle": "Fusion multi-agent workflow", "fusionIntro": "Lead plans, Sidekick implements, and Reviewer independently inspects the patch. A real test script is run before acceptance. Prepare a draft before confirming execution.", "fusionRoles": "Agent roles", "fusionRoleLead": "Plan, split work, final signoff", "fusionRoleSidekick": "Implement and fix failed tests", "fusionRoleReviewer": "Read-only review, blocking findings", "fusionTask": "Engineering task", "fusionTaskPlaceholder": "Example: Fix an order weight calculation bug and add regression tests without changing existing APIs.", "fusionNamePlaceholder": "Optional: Fusion \xB7 collaborative repair", "fusionInheritModel": "Inherit session model", "fusionModelLead": "Lead model", "fusionModelSidekick": "Sidekick model", "fusionModelReviewer": "Reviewer model", "fusionTest": "Test script (pnpm run)", "fusionRounds": "Maximum review rounds", "fusionSafety": "Creating a workflow does not start an agent. First launch requires your confirmation in the workflow panel. Inspect the test script and permissions before running.", "fusionCreateDraft": "Prepare draft and inspect graph", "fusionTestPass": "Passed", "fusionTestFail": "Failed", "fusionReview": "Independent review", "fusionReviewPass": "Passed", "fusionReviewFail": "Not approved", "fusionSignoff": "Final acceptance", "fusionSignoffPass": "Passed", "fusionSignoffFail": "Not approved", "fusionNotYet": "No evidence yet", "fusionBlockingIssues": "Blocking issues", "fusionInspect": "Inspect nodes and logs" });
   Object.assign(zh, { fusionTestHint: "\u9ED8\u8BA4\u6267\u884C pnpm run selfcheck\uFF1B\u5982\u679C\u5F53\u524D\u9879\u76EE\u6CA1\u6709 selfcheck \u811A\u672C\uFF0C\u8BF7\u4FEE\u6539\u4E3A package.json \u4E2D\u5B9E\u9645\u5B58\u5728\u7684\u811A\u672C\u3002" });
   Object.assign(en, { fusionTestHint: "Default: pnpm run selfcheck. Choose a script defined in the current project package.json before launch." });
+  Object.assign(zh, { "fusionTerminalTitle": "\u878D\u5408\u534F\u4F5C \xB7 \u5B9E\u65F6\u62D3\u6251", "fusionTerminalOversight": "\u51B3\u7B56\u4E0E\u76D1\u7763", "fusionTerminalDecision": "\u51B3\u7B56\u5C42", "fusionTerminalSignoff": "\u6700\u7EC8\u7B7E\u6536", "fusionTerminalNotAdvisor": "\u6B64\u5904\u663E\u793A\u771F\u5B9E Lead \u72B6\u6001\uFF1B\u6309\u9700\u987E\u95EE\u5C1A\u672A\u63A5\u5165", "fusionTerminalUnknown": "\u5C1A\u65E0\u6A21\u578B\u8BB0\u5F55", "fusionTerminalExecution": "\u4E3B\u6267\u884C\u94FE", "fusionTerminalBuild": "\u4EE3\u7801\u5B9E\u73B0", "fusionTerminalGate": "\u786E\u5B9A\u6027\u6D4B\u8BD5\u95E8\u7981", "fusionTerminalParallel": "\u8BA1\u5212 / \u9A8C\u8BC1 / \u5BA1\u67E5", "fusionTerminalPlan": "\u89C4\u5212", "fusionTerminalTest": "\u6D4B\u8BD5", "fusionTerminalReview": "\u5BA1\u67E5", "fusionTerminalReturn": "\u8FD4\u56DE Lead \xB7 \u68C0\u67E5\u548C\u7B7E\u6536", "fusionTerminalLogs": "\u5B9E\u65F6\u6267\u884C\u4E8B\u4EF6", "fusionTerminalNoLogs": "\u5C1A\u65E0\u6267\u884C\u4E8B\u4EF6", "fusionTerminalEvidence": "\u53EA\u663E\u793A\u5B9E\u9645\u5DE5\u4F5C\u6D41\u4E8B\u4EF6\u3001Token \u548C\u6D4B\u8BD5\u8BC1\u636E\uFF1B\u8FDE\u63A5\u52A8\u753B\u4EC5\u5728\u8FD0\u884C\u65F6\u51FA\u73B0", "fusionTerminalView": "\u5B9E\u65F6\u62D3\u6251", "fusionTerminalGraph": "\u5B8C\u6574\u4F9D\u8D56\u56FE" });
+  Object.assign(en, { "fusionTerminalTitle": "Fusion / live topology", "fusionTerminalOversight": "Decision & oversight", "fusionTerminalDecision": "Decision", "fusionTerminalSignoff": "Final sign-off", "fusionTerminalNotAdvisor": "Real Lead status only; no on-demand Advisor integration yet", "fusionTerminalUnknown": "Not observed", "fusionTerminalExecution": "Primary execution", "fusionTerminalBuild": "Implementation", "fusionTerminalGate": "Deterministic test gate", "fusionTerminalParallel": "Plan / test / review", "fusionTerminalPlan": "Plan", "fusionTerminalTest": "Test", "fusionTerminalReview": "Review", "fusionTerminalReturn": "Back to Lead \xB7 verification", "fusionTerminalLogs": "Live events", "fusionTerminalNoLogs": "No workflow events yet", "fusionTerminalEvidence": "Only real workflow events, tokens and test evidence are shown; lines animate only while running", "fusionTerminalView": "Live topology", "fusionTerminalGraph": "Full dependency graph" });
   var css = `
 .caw-center,.caw-dock { box-sizing:border-box;height:100%;min-width:0;overflow:hidden;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);container-type:inline-size }
 .caw-center { padding:20px clamp(12px,2vw,24px) 24px }
@@ -1259,14 +1480,15 @@ return { finding, review };`;
     const code = (value) => h("pre", { className: "caw-code" }, typeof value === "string" ? value : JSON.stringify(value, null, 2));
     const button = (label, onClick, disabled = false, primary = false, extra = {}) => h("button", { type: "button", className: `caw-btn${primary ? " primary" : ""}`, onClick, disabled, ...extra }, label);
     const { FusionComposer, FusionSummary } = createFusionView(React, { t, button });
+    const { FusionTerminal } = createFusionTerminalView(React, { t, button });
     const state = (status) => h("span", { className: "caw-state", "data-state": status }, t(status ?? "unknown"));
     function FlowGraph({ analysis, kind, setKind, run, onNode }) {
       const [zoom, setZoom] = useState(1);
       const markerId = React.useId();
       const [availableWidth, setAvailableWidth] = useState(void 0);
-      const model = graphModel(analysis, kind, availableWidth);
+      const model2 = graphModel(analysis, kind, availableWidth);
       const graphRef = useRef(null);
-      const fit = () => setZoom(Math.min(1, Math.max(0.25, ((graphRef.current?.clientWidth ?? model.width) - 2) / model.width)));
+      const fit = () => setZoom(Math.min(1, Math.max(0.25, ((graphRef.current?.clientWidth ?? model2.width) - 2) / model2.width)));
       useLayoutEffect(() => {
         const element = graphRef.current;
         if (!element) return;
@@ -1289,7 +1511,7 @@ return { finding, review };`;
           graphRef.current.scrollLeft = 0;
         }
       }, [analysis, kind]);
-      const sourceIds = new Set(model.nodes.filter((node) => node.kind === "source" || node.id === "entry").map((node) => node.id));
+      const sourceIds = new Set(model2.nodes.filter((node) => node.kind === "source" || node.id === "entry").map((node) => node.id));
       const tasks = phaseModel(run ?? { analysis }).flatMap((phase) => phase.tasks);
       const instructions = new Map(tasks.map((task) => [task.source ?? task.id, task.instruction]));
       return h(
@@ -1312,22 +1534,22 @@ return { finding, review };`;
         h(
           "div",
           { className: "caw-graph", ref: graphRef, "data-workflow-graph": kind, tabIndex: 0, "aria-label": t("canvasHint") },
-          !model.nodes.length ? h("div", { className: "caw-empty" }, h("h3", null, t("emptyGraphTitle")), h("p", { className: "caw-note" }, t("emptyGraph"))) : h(
+          !model2.nodes.length ? h("div", { className: "caw-empty" }, h("h3", null, t("emptyGraphTitle")), h("p", { className: "caw-note" }, t("emptyGraph"))) : h(
             "svg",
-            { width: model.width * zoom, height: model.height * zoom, viewBox: `0 0 ${model.width} ${model.height}`, role: "group", "aria-label": t(kind) },
+            { width: model2.width * zoom, height: model2.height * zoom, viewBox: `0 0 ${model2.width} ${model2.height}`, role: "group", "aria-label": t(kind) },
             h("defs", null, h("marker", { id: markerId, viewBox: "0 0 10 10", refX: 9, refY: 5, markerWidth: 6, markerHeight: 6, orient: "auto-start-reverse" }, h("path", { d: "M 0 0 L 10 5 L 0 10 z", fill: "var(--dsw-alias-label-secondary)" }))),
-            (model.groups ?? []).map((group) => h(
+            (model2.groups ?? []).map((group) => h(
               "g",
               { key: group.id, role: "group", "aria-label": group.label },
               h("rect", { className: "caw-phase-band", x: group.x, y: group.y, width: group.width, height: group.height, rx: 12 }),
               h("text", { x: group.x + 20, y: group.y + 28, fill: "var(--dsw-alias-label-primary)", fontSize: 13, fontWeight: 600 }, group.label),
               h("text", { x: group.x + group.width - 20, y: group.y + 28, textAnchor: "end", fill: "var(--dsw-alias-label-secondary)", fontSize: 11 }, `${group.taskCount} ${t("tasks")}`)
             )),
-            model.edges.map((edge, i) => {
-              const d = graphEdgePoints(model, edge).map(([x, y], index) => `${index ? "L" : "M"}${x},${y}`).join(" ");
+            model2.edges.map((edge, i) => {
+              const d = graphEdgePoints(model2, edge).map(([x, y], index) => `${index ? "L" : "M"}${x},${y}`).join(" ");
               return h("path", { key: i, className: "caw-edge", "data-source": sourceIds.has(edge.from), d, fill: "none", strokeDasharray: edge.exact === false ? "4 3" : void 0, markerEnd: `url(#${markerId})` }, h("title", null, `${edge.from} \u2192 ${edge.to}`));
             }),
-            model.nodes.map((node) => {
+            model2.nodes.map((node) => {
               const sites = node.sites ?? [node.id];
               const source = [.../* @__PURE__ */ new Set([node.id, ...sites])].join(" \xB7 ");
               if (node.structural) {
@@ -1381,7 +1603,7 @@ ${instruction || node.kind || ""}`),
             })
           )
         ),
-        h("footer", { className: "caw-graph-footer" }, h("span", null, `${model.nodes.length} ${t("nodes")} \xB7 ${model.edges.length} ${t("connections")}`), h("span", null, t("canvasHint")))
+        h("footer", { className: "caw-graph-footer" }, h("span", null, `${model2.nodes.length} ${t("nodes")} \xB7 ${model2.edges.length} ${t("connections")}`), h("span", null, t("canvasHint")))
       );
     }
     const Artifact = createArtifactView(React, { api, t, code, downloadUrl: (sessionId, runId, item) => `${API}/artifact?sessionId=${encodeURIComponent(sessionId)}&id=${encodeURIComponent(runId)}&artifactId=${encodeURIComponent(item.id)}&version=${encodeURIComponent(item.version ?? 1)}` });
@@ -1436,6 +1658,7 @@ ${instruction || node.kind || ""}`),
       const [error, setError] = useState(""), [busy, setBusy] = useState(false);
       const [editorOpen, setEditorOpen] = useState(cached?.editorOpen ?? !runId);
       const [fusionOpen, setFusionOpen] = useState(cached?.fusionOpen ?? false);
+      const [terminalMode, setTerminalMode] = useState(cached?.terminalMode ?? true);
       const [fusionDraft, setFusionDraft] = useState(cached?.fusionDraft);
       const [modelRoute, setModelRoute] = useState(cached?.modelRoute ?? "");
       const [pageMore, setPageMore] = useState({});
@@ -1460,7 +1683,7 @@ ${instruction || node.kind || ""}`),
       }, [navigation?.revision]);
       const initialized = useRef(cached?.initialized ?? null);
       const editorSnapshot = useRef(null);
-      editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, fusionOpen, fusionDraft, initialized: initialized.current } };
+      editorSnapshot.current = { key: editor.key, draft: { script, name, argsText, concurrency, scope, analysis, analyzedScript, tab, kind, picked, modelRoute, answers, editorOpen, fusionOpen, fusionDraft, terminalMode, initialized: initialized.current } };
       useEffect(() => () => {
         editorStates.set(sessionId, editorSnapshot.current);
       }, [sessionId]);
@@ -1471,6 +1694,7 @@ ${instruction || node.kind || ""}`),
         setName(run.name);
         setAnalysis(run.analysis);
         setAnalyzedScript(run.script);
+        if (run.args?.preset === "fusion.v1") setTab((previous) => previous === "timeline" ? "overview" : previous);
         setArgsText(JSON.stringify(run.args ?? {}, null, 2));
         setConcurrency(run.concurrency ?? 4);
         setModelRoute(run.provider ? JSON.stringify({ provider: run.provider, model: run.model }) : "");
@@ -1710,7 +1934,18 @@ ${instruction || node.kind || ""}`),
                   }
                 }, busy))))),
                 tab === "timeline" && h(Timeline, { run: run ?? { analysis: currentAnalysis }, onNode: inspectNode }),
-                tab === "overview" && h(React.Fragment, null, h(FlowGraph, { analysis: currentAnalysis, kind, setKind, run, onNode: inspectNode }), run?.resumedFrom && h("p", { className: "caw-note" }, `${t("source")}: ${run.resumedFrom}`)),
+                tab === "overview" && h(
+                  React.Fragment,
+                  null,
+                  run?.args?.preset === "fusion.v1" && h(
+                    "div",
+                    { className: "caw-row", role: "group", "aria-label": t("fusionTerminalTitle"), style: { marginBottom: 12 } },
+                    button(t("fusionTerminalView"), () => setTerminalMode(true), false, false, { "aria-pressed": terminalMode }),
+                    button(t("fusionTerminalGraph"), () => setTerminalMode(false), false, false, { "aria-pressed": !terminalMode })
+                  ),
+                  terminalMode && run?.args?.preset === "fusion.v1" ? h(FusionTerminal, { run: { ...run, events: visibleEvents, reports: mergeRows(run?.reports, additionalReports, (row) => String(row.instance?.siteId) + ":" + String(row.instance?.ordinal)) }, onLogs: inspectFusion }) : h(FlowGraph, { analysis: currentAnalysis, kind, setKind, run, onNode: inspectNode }),
+                  run?.resumedFrom && h("p", { className: "caw-note" }, `${t("source")}: ${run.resumedFrom}`)
+                ),
                 tab === "details" && h(
                   React.Fragment,
                   null,
