@@ -1,4 +1,6 @@
-# workflow/ — 已隔离，不参与本包
+# workflow/ — 历史隔离记录（0.7.0 起），Fusion PR #16 开发预览已恢复打包
+
+> **注意**：下面的清单描述的是 main 的 0.7.5（输入框预测单独发布包），不是 `feat/fusion-review-loop-20261025` 开发预览分支。该预览分支已通过独立 Cordis Host 入口 `dsh-composer-assist/workflow` 恢复 ZCode 编排，Client 同时注册「工作流」页面和 Fusion UI；完整本地验证/安装步骤参阅 [预览安装说明](../docs/fusion-preview-install.md)。开发预览仍未经过真实 DSH Mac GUI 验收，不可直接发布 npm。
 
 这个目录是从 ZCode 移植的动态工作流实现（编译器、执行引擎、DSH 适配层、画布 UI）。
 它**仍然保留在这里**，但从 0.7.0 起已经与本包解耦：
