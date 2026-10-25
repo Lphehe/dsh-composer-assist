@@ -2,6 +2,19 @@
 
 This repository's npm package **dsh-composer-assist@0.7.5 does not ship workflow/**. This recipe is **not** available when users install the normal composer-prediction package. It is code for the separately installed/packaged ZCode workflow host, not a claim of a released DSH feature.
 
+## Fusion UI (isolated workflow view)
+
+The retained native Workflow tab now includes a **Fusion** entry next to **New**. It opens an opt-in editor with:
+- A task description and optional workflow name.
+- Three role-specific approved model selectors (Lead, Sidekick, Reviewer), each with an inherit-session default.
+- A named `pnpm run` test script (default `selfcheck`) and a bounded 1–3 review-round limit.
+- **Prepare draft and inspect graph**, which calls `fusion_create` and navigates to the existing analysis/graph view; it **does not start any agents**.
+- A summary on Fusion runs showing actual test exit evidence, reviewer outcome, blocking issues, and Lead signoff. Real-time graph, logs, stop and resume remain native workflow features.
+
+Colors and typography use the existing DSH host tokens. Narrow windows collapse role cards into a single column. Labels are available in Chinese and English.
+
+**Shipping caveat:** This UI lives in `workflow/client/ui.js` and `workflow/client/fusion.js`. It is **not currently wired into the released composer-prediction Client bundle**, because the Workflow extension remains isolated. UI unit tests and bundling checks cannot substitute for a signed DSH desktop smoke test.
+
 ## What changed
 
 The isolated `workflow/plugin.js` now accepts `zcode_workflow` with `action: "fusion_create"`. This calls `createFusionDraft` and `manager.prepare` to create an inspectable workflow draft. The **first launch still requires the existing explicit human confirmation** in the Workflow panel. No automatic push, merge, deployment or npm publish is performed.
