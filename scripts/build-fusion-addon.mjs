@@ -25,7 +25,7 @@ runNode(join(root, 'scripts/build-workflow.mjs'))
 // initialization. Preserve a real Node require in the ESM bundle instead of
 // esbuild's throwing dynamic-require shim. Keep this Node-only banner OUT of the
 // browser client bundle.
-const nodeBanner = { js: "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" }
+const nodeBanner = { js: "import { createRequire } from 'node:module'; import { fileURLToPath } from 'node:url'; import { dirname } from 'node:path'; const require = createRequire(import.meta.url); const __filename = fileURLToPath(import.meta.url); const __dirname = dirname(__filename);" }
 const common = { bundle: true, logLevel: 'info', legalComments: 'eof' }
 await build({
   ...common,
