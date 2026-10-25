@@ -5,10 +5,12 @@ import { createFusionDraft } from './fusion-template.js'
 const test = createFusionDraft({ task: '修复订单处理中的空指针', testScript: 'selfcheck' })
 assert.equal(test.name, 'Fusion · 协作修复')
 assert.deepEqual(test.args, {
+  preset: 'fusion.v1',
   task: '修复订单处理中的空指针',
   maxRounds: 2,
   testScript: 'selfcheck',
   timeoutMs: 180000,
+  models: { lead: null, sidekick: null, reviewer: null },
 })
 assert.equal(test.concurrency, 3)
 for (const role of ['Fusion Lead', 'Fusion Sidekick', 'Fusion Reviewer']) {
@@ -35,6 +37,7 @@ for (const name of ['provider/strong', 'provider/fast', 'provider/audit']) {
 }
 assert.equal(distinct.args.maxRounds, 3)
 assert.equal(distinct.args.testScript, 'test:unit')
+assert.deepEqual(distinct.args.models, { lead: 'provider/strong', sidekick: 'provider/fast', reviewer: 'provider/audit' })
 
 // Syntax-only TS check, without a model call or a DSH host.
 const result = ts.transpileModule(distinct.script, {
