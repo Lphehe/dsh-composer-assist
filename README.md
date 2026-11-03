@@ -4,6 +4,16 @@
 >
 > **English**: Predicts your next message in the DSH composer, based on your conversation and how you talk to it. Press Tab to take it. It also completes a draft as you type and rewrites a prompt for clarity on demand.
 
+## 开发进展 · Development update
+
+当前开发版本正在完善自动续接：在助手回复后展示预测候选，可选择仅观察或自动执行，并设置续接轮数、判定严格度和工具权限策略；自动续接消息会明确标记。预测分数是模型自评，实际行为仍取决于宿主权限和会话状态。
+
+自动续接及上述控制项属于开发中的功能，**尚未包含在本页提供的 v0.1.1 安装包中**。公开版本仍以本页安装说明和对应发布包为准。
+
+The development version is improving automatic continuation, with prediction candidates, observe/automatic modes, configurable rounds, decision strictness and tool policy. Automatically submitted messages are labelled, and model scores are self-assessments. Host permissions and session state still apply.
+
+These continuation features are under development and **are not included in the v0.1.1 package linked below**. The installation instructions and release package describe the public version.
+
 ## 反馈 · Feedback
 
 问题、建议或使用疑问，欢迎加入 QQ 群 **1129389677**。
