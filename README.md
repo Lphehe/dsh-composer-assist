@@ -6,13 +6,23 @@
 
 ## 开发进展 · Development update
 
-当前开发版本正在完善自动续接：在助手回复后展示预测候选，可选择仅观察或自动执行，并设置续接轮数、判定严格度和工具权限策略；自动续接消息会明确标记。预测分数是模型自评，实际行为仍取决于宿主权限和会话状态。
+以下介绍的是**尚未公开发布的开发版**，并非下方 v0.1.1 安装包的功能清单。开发和验收仍在进行，实际表现取决于宿主能力、会话状态和模型配置。
 
-自动续接及上述控制项属于开发中的功能，**尚未包含在本页提供的 v0.1.1 安装包中**。公开版本仍以本页安装说明和对应发布包为准。
+- **预测与决策**：除下一条消息预测、草稿补全和润色外，开发版支持预测、决策选择及组合模式；润色先预览，再由用户应用。预测的自评分数和决策模型的选择把握均不等于正确率。
+- **自动续接**：开启后围绕当前会话中的原始目标选择下一步，可选仅观察或自动执行，并调整轮数、判定严格度和工具策略。自动提交的续接会标记；遇到需要人工处理、状态变化或结果未知等情况会暂停，宿主权限和用户原有约束仍然适用。
+- **动态工作流**：复杂任务可以给出多个工作流方案，展示步骤、依赖与调用概况；用户选择并确认启动。也可先准备草稿，再在工作流页面核对和运行。工作流支持多代理、阶段、并行及有界反馈，提供运行记录、停止、恢复和修订；未知副作用需要核实。
+- **监控与角色**：工作流页面和会话侧栏展示任务、代理、活动、用量和结果，可查看流程、节点及日志。显示内容以实际记录为准，缺失数据保持未知。角色库可保存职责和模型策略；协作修复预设包含主控、执行和审查角色，并结合测试与审查反馈。角色职责不等同于正在运行的代理。
 
-The development version is improving automatic continuation, with prediction candidates, observe/automatic modes, configurable rounds, decision strictness and tool policy. Automatically submitted messages are labelled, and model scores are self-assessments. Host permissions and session state still apply.
+自动续接、动态工作流、监控、角色库及开发版新增决策能力**尚未包含在本页提供的 v0.1.1 安装包中**。预测、决策和工作流代理可能产生实际模型调用费用；公开版安装与许可仍以下文为准。
 
-These continuation features are under development and **are not included in the v0.1.1 package linked below**. The installation instructions and release package describe the public version.
+The following describes an **unreleased development version**, not the features in the v0.1.1 package below. Development and verification are ongoing; behavior depends on host capabilities, session state and model configuration.
+
+- **Prediction and decisions:** Alongside next-message prediction, draft completion and polish, the development version supports prediction, decision selection and combined modes. Polish is previewed before applying. Model self-scores and decision confidence are not measures of correctness.
+- **Automatic continuation:** When enabled, it selects next steps within the original goal of the current session. Observe-only and automatic modes offer configurable round limits, decision strictness and tool policy. Automatically submitted continuations are labelled. It pauses for conditions such as human decisions, changed state or unknown outcomes; host permissions and the user's existing constraints continue to apply.
+- **Dynamic workflows:** Complex tasks can offer multiple plans showing steps, dependencies and an estimate of calls; the user selects and confirms a launch. A draft can also be prepared for review before running. Workflows support multiple agents, phases, parallel work and bounded feedback, with records, stop, resume and amendment. Unknown side effects require review.
+- **Monitoring and roles:** The workflow page and conversation sidebar show tasks, agents, activity, usage and results, with access to flows, nodes and logs. Views use recorded data and leave missing information unknown. A role library saves responsibilities and model policies; the collaborative repair preset combines lead, execution and review roles with test and review feedback. A role is not itself a running agent.
+
+Automatic continuation, dynamic workflows, monitoring, the role library and the new decision capabilities **are not included in the v0.1.1 package linked below**. Prediction, decisions and workflow agents can incur real model-call charges. The installation and license sections below apply to the public version.
 
 ## 反馈 · Feedback
 
