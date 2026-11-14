@@ -59,9 +59,9 @@ Use **Settings → Composer prediction** to choose the mode, display, model, tim
 </p>
 <p align="center"><sub>设置页面示例 · Settings example</sub></p>
 
-每次预测都会发起一次可能计费的模型调用。默认自动模式在每轮回答后预测一次；可切换为仅手动或关闭插件。上下文包括近期对话和有限的工具结果，以及工作区顶层文件名和 Git 状态；不会读取工作区文件内容。
+每次预测都会发起一次可能计费的模型调用。默认自动模式在每轮回答后预测一次；可切换为仅手动或关闭插件。上下文包括近期对话、有限的工具结果和工作区顶层文件名；**默认不含 Git 状态**（可在设置中按需开启）；不会读取工作区文件内容。
 
-Predictions make model calls that may incur charges. Auto mode predicts after each completed turn; switch to manual mode or disable the plugin in settings. Context includes recent conversation, bounded tool results, top-level filenames and Git status; workspace file contents are not read.
+Predictions make model calls that may incur charges. Auto mode predicts after each completed turn; switch to manual mode or disable the plugin in settings. Context includes recent conversation, bounded tool results and top-level filenames; **Git status is off by default** (opt in via settings). Workspace file contents are not read.
 
 ## 开发进展 · Development update
 
@@ -74,6 +74,22 @@ Automatic continuation, dynamic workflows, monitoring, roles, and newer decision
 运行 `node selfcheck.mjs` 可检查解析、学习统计和上下文失败降级；该自检不会调用模型。问题和建议欢迎加入 QQ 群 **1129389677**。
 
 Run `node selfcheck.mjs` for parser, learning-counter, and context-fallback checks; it does not call a model. For feedback, join QQ group **1129389677**.
+
+## 数据流与隐私 · Data flow and privacy
+
+每次预测发给模型的内容：近期对话文本（有上限）、有限的文本类工具结果、**工作区顶层文件名**；不读取工作区文件内容，凭据形状的文件名会被剔除。默认**不**发送 Git 状态——开启「在上下文里附 Git 状态」后才会为每轮预测启动一次 `git status` 子进程。预测调用本身不写入会话日志。
+
+「诊断模式」（默认关闭）用于排查行内预览的对齐问题；关闭时不会有任何诊断上报，Host 也不保留渲染状态。即使开启，上报数据只包含布局数值与阶段标记，**不含草稿文本、候选文本或 ghost 文本**。设置页会显示最近一次预测失败的原因（超时 / 网络 / 其它错误）。
+
+预测失败时建议栏会显示具体原因并提供「重试」，不再静默无结果。
+
+Predictions send recent conversation text (bounded), limited text tool results, and **top-level workspace file names**; file contents are never read and credential-shaped names are dropped. Git status is **off by default** — enabling it runs a `git status` child process per prediction. Prediction calls are not appended to the session log. Diagnostics mode (default off) reports layout/phase data only, never draft, candidate or ghost text.
+
+## 支持的 DSH 版本 · Supported DSH versions
+
+`package.json` 声明 `engines.dsh: ">=0.2.1-rc.2 <0.3.0"`。0.2.1 起 `engines.dsh` 单独决定兼容性并压过 peer 检查；不在此区间的版本安装时会得到明确提示。图标经 `exports["./icon"]` 提供，0.2.0 不识别该形式（故不在支持范围内）。
+
+`package.json` declares `engines.dsh: ">=0.2.1-rc.2 <0.3.0"`. From 0.2.1 `engines.dsh` alone decides compatibility; installing on an unsupported version produces an explicit warning. The icon is exposed via `exports["./icon"]`, which 0.2.0 does not read, so 0.2.0 is out of range.
 
 ## 许可证 · License
 

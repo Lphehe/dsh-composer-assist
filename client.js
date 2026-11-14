@@ -29,6 +29,11 @@ window.__ModuleLoader__.load({
       'strip.confidenceLow': '较低',
       'strip.thinking': '正在生成…',
       'strip.failed': '生成失败',
+      'strip.failed.timeout': '请求超时',
+      'strip.failed.network': '网络或服务不可用',
+      'strip.failed.error': '请求失败',
+      'strip.retry': '重试',
+      'settings.lastError': '上次预测失败：',
       'predict.again': '重新预测输入框',
       'predict.short': '预测',
       'predict.title': '预测输入框',
@@ -70,6 +75,10 @@ window.__ModuleLoader__.load({
       'settings.minConfidence': '置信度门槛',
       'settings.minConfidenceHint': '低于此值的预测会被丢弃；0 表示全部保留，只在建议栏标注置信度。',
       'settings.costNote': '每次预测都是一次真实计费的模型调用；关掉开关即可完全停止。',
+      'settings.diagnostics': '诊断模式',
+      'settings.diagnosticsHint': '默认关闭。开启后才上报布局诊断数据，且绝不发送草稿或建议文本。',
+      'settings.gitContext': '在上下文里附 Git 状态',
+      'settings.gitContextHint': '默认关闭。开启后会为每轮预测启动一次 git status 子进程。',
       'settings.saveFailed': '设置保存失败',
       'settings.noModels': '当前没有可用模型，请先在「模型」设置里配置。',
       'settings.catalogFailed': '读取模型目录失败：',
@@ -89,6 +98,11 @@ window.__ModuleLoader__.load({
       'strip.confidenceLow': 'low',
       'strip.thinking': 'Generating…',
       'strip.failed': 'Generation failed',
+      'strip.failed.timeout': 'Request timed out',
+      'strip.failed.network': 'Network or service unavailable',
+      'strip.failed.error': 'Request failed',
+      'strip.retry': 'Retry',
+      'settings.lastError': 'Last prediction failed: ',
       'predict.again': 'Predict input again',
       'predict.short': 'Predict',
       'predict.title': 'Predict input',
@@ -130,6 +144,10 @@ window.__ModuleLoader__.load({
       'settings.minConfidence': 'Confidence bar',
       'settings.minConfidenceHint': 'Predictions below this are dropped; 0 keeps them and only shows the confidence badge.',
       'settings.costNote': 'Every prediction is a real billed model call; switch this off to stop it entirely.',
+      'settings.diagnostics': 'Diagnostics mode',
+      'settings.diagnosticsHint': 'Off by default. Only then are layout diagnostics reported, and never draft or suggestion text.',
+      'settings.gitContext': 'Include Git status in context',
+      'settings.gitContextHint': 'Off by default. When on, a git status child process runs for each prediction.',
       'settings.saveFailed': 'Could not save settings',
       'settings.noModels': 'No models are available; configure one under Models first.',
       'settings.catalogFailed': 'Could not read the model catalog: ',
@@ -155,12 +173,16 @@ window.__ModuleLoader__.load({
         const body = await response.json()
         if (body?.settings === undefined) throw new Error('settings response carried no settings')
         settingsStore.error = undefined
+        clearFailure()
         settingsStore.set(body.settings)
         return body.settings
       } catch (failure) {
         // A silent null store reads as "disabled" downstream, which looks like the
         // feature being broken. Keep the reason so a surface can say it out loud.
         settingsStore.error = failure instanceof Error ? failure.message : String(failure)
+        // Also surface it through the shared failure store, which the strip and
+        // settings page actually read (settingsStore.error alone was never used).
+        publishFailure(failureOf(failure), settingsStore.error)
         return undefined
       }
     }
@@ -356,7 +378,15 @@ window.__ModuleLoader__.load({
       } catch { return undefined }
     }
 
+    /**
+     * Diagnostics are opt-in. In the default build this is a no-op: no DOM
+     * measurement, no render-time network request, no user text leaves the page.
+     * Even when enabled, draft text and candidate/ghost text are never included
+     * in a report — the probe is about layout and phase only.
+     */
+    const USER_TEXT_FIELDS = ['draft', 'ghost', 'ghostText', 'text', 'textValue']
     function reportProbe(extra) {
+      if (settingsStore.value?.diagnostics !== true) return undefined
       try {
         const input = composerInputElement()
         const span = typeof document === 'undefined' ? null : document.querySelector(`.${GHOST_CLASS}`)
@@ -368,10 +398,11 @@ window.__ModuleLoader__.load({
         const placeholder = typeof document === 'undefined'
           ? null : document.querySelector('[data-composer-card] [data-composer-placeholder]')
         const placeholderStyle = placeholder === null ? null : getComputedStyle(placeholder)
+        const cleanExtra = { ...extra }
+        for (const field of USER_TEXT_FIELDS) delete cleanExtra[field]
         const report = {
           at: Date.now(),
           ghostPresent: span !== null && span !== undefined,
-          ghostText: span?.textContent ?? '',
           ghostHidden: span?.hidden ?? null,
           ghostDisplay: style?.display ?? null,
           ghostFontSize: style?.fontSize ?? null,
@@ -385,7 +416,7 @@ window.__ModuleLoader__.load({
             && rect.left >= box.left - 1 && rect.right <= box.right + 1,
           composerBox: box === undefined ? null : { top: box.top, bottom: box.bottom, left: box.left, right: box.right },
           ghostBox: rect === undefined ? null : { top: rect.top, bottom: rect.bottom, left: rect.left, right: rect.right },
-          ...extra,
+          ...cleanExtra,
         }
         void fetch(`${API}/probe`, {
           method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(report),
@@ -434,11 +465,31 @@ window.__ModuleLoader__.load({
     /** Subscribers that re-read `hasSuggestion` when a suggestion appears or clears. */
     const listeners = new Set()
 
+    /** Reason for the most recent failed prediction, surfaced by the strip. */
+    const failureStore = { reason: '', detail: '', at: 0 }
+    function publishFailure(reason, detail) {
+      failureStore.reason = reason
+      failureStore.detail = detail
+      failureStore.at = Date.now()
+      for (const listener of listeners) { try { listener() } catch { /* one bad subscriber */ } }
+    }
+    function clearFailure() {
+      failureStore.reason = ''; failureStore.detail = ''; failureStore.at = 0
+    }
+    /** Turn a thrown fetch/timeout error into a short, user-facing failure reason. */
+    function failureOf(error) {
+      const name = error?.name
+      if (name === 'TimeoutError' || name === 'AbortError') return 'timeout'
+      if (error instanceof TypeError || /network|fetch|failed to fetch/i.test(String(error?.message ?? ''))) return 'network'
+      return 'error'
+    }
+
     /** A prediction request in flight, owned by the module (not a component). */
     function runRequest(kind, sessionId, draft, cause, source) {
       if (kind === 'complete' && hasDraftRequest(sessionId, draft)) return Promise.resolve(null)
       const id = nextRequestId(sessionId)
       const revision = trackDraft(sessionId, draft).revision
+      const owner = sessionId
       pendingBySession.set(sessionId, { id, draft, revision, bounded: true })
       publishStore()
       reportProbe({ phase: 'begin', trace: `req-${id}`, owner: sessionId, kind, cause })
@@ -446,6 +497,8 @@ window.__ModuleLoader__.load({
         const stale = id !== currentRequestId(sessionId) || draftBySession.get(sessionId)?.revision !== revision
         reportProbe({ phase: 'result', trace: `req-${id}`, kind,
           textLength: result.text.length, stale, owner: sessionId, confidence: result.confidence })
+        // A fresh, non-empty result is a success: clear any earlier failure.
+        if (!stale && result.text !== '') clearFailure()
         if (stale || result.text === '') return null
         const record = {
           kind, text: result.text, draftAt: draft, source: result.source,
@@ -453,7 +506,13 @@ window.__ModuleLoader__.load({
         }
         rememberSuggestion(sessionId, record)
         return record
-      }).catch(() => null).finally(() => {
+      }).catch((error) => {
+        // A superseded request must not raise a failure for a newer one.
+        if (id === currentRequestId(owner)) {
+          publishFailure(failureOf(error), error instanceof Error ? error.message : String(error))
+        }
+        return null
+      }).finally(() => {
         if (pendingBySession.get(sessionId)?.id === id) pendingBySession.delete(sessionId)
         publishStore()
       })
@@ -465,6 +524,17 @@ window.__ModuleLoader__.load({
      * `useRef` would restart at zero, marking the pending result stale.
      */
     const sessionStorageKey = 'dsh.composer-assist.predictions.v2'
+    // v0.1.0 wrote a v1 key and an unversioned Symbol; both are superseded.
+    // Remove them once on startup so old caches cannot accumulate forever.
+    const LEGACY_STORAGE_KEYS = ['dsh.composer-assist.predictions.v1']
+    function clearLegacySessionState() {
+      try {
+        for (const key of LEGACY_STORAGE_KEYS) sessionStorage.removeItem(key)
+        const legacy = Symbol.for('dsh.composer-assist.session-state')
+        if (window[legacy] !== undefined) delete window[legacy]
+      } catch { /* Storage can be unavailable; nothing to clean. */ }
+    }
+    clearLegacySessionState()
     function restoreSessionState() {
       const state = {
         requests: new Map(), suggestions: new Map(), candidates: new Map(),
@@ -759,11 +829,15 @@ window.__ModuleLoader__.load({
         const owner = sessionId
         reportProbe({ phase: 'request', kind, cause: cause ?? 'unknown', draft: at, owner })
         setFailed(false)
+        const startedAt = Date.now()
         await runRequest(kind, owner, at, cause, source)
         if (sessionIdRef.current === owner) {
           const stored = suggestionBySession.get(owner)
           setPending(stored === undefined ? null : { ...stored })
           setBusy(pendingBySession.has(owner))
+          // Surface a failure that this request just produced, so "no suggestion"
+          // is distinguishable from "request failed".
+          if (failureStore.at >= startedAt && failureStore.reason !== '') setFailed(true)
           for (const listener of listeners) listener()
         }
       }
@@ -948,8 +1022,9 @@ window.__ModuleLoader__.load({
       if (inline && pending === null && !busy && !failed) return null
       if (!inline && pending === null && !busy && !failed) return null
 
+      const failedReason = failed ? (failureStore.reason || 'error') : ''
       const badge = busy ? t('strip.thinking')
-        : failed ? t('strip.failed')
+        : failed ? `${t('strip.failed')} · ${t(`strip.failed.${failedReason}`)}`
           // `pending` can be null while busy or failed, so never read through it.
           : t(pending?.kind === 'complete' ? 'strip.complete' : 'strip.next')
 
@@ -991,6 +1066,17 @@ window.__ModuleLoader__.load({
         counter !== '' && h('span', { style: stripBadge }, counter),
         inline && total > 1 && draft === '' && h('span', { style: stripBadge }, t('strip.cycle')),
         h('span', { style: stripActions },
+          failed && h('button', {
+            type: 'button',
+            onClick: () => { void ask('next', draftRef.current, 'retry') },
+            title: t('strip.retry'),
+            style: {
+              cursor: 'pointer', border: '1px solid var(--dsw-alias-state-error-primary)',
+              background: 'transparent', color: 'var(--dsw-alias-state-error-primary)',
+              borderRadius: '6px', padding: '3px 10px', fontSize: '12px', lineHeight: '1.6',
+              whiteSpace: 'nowrap',
+            },
+          }, t('strip.retry')),
           pending !== null && h('button', {
             type: 'button',
             onClick: () => { acceptRef.current?.() },
@@ -1145,10 +1231,16 @@ window.__ModuleLoader__.load({
       const [settings, setSettings] = useState(settingsStore.value)
       const [catalog, setCatalog] = useState([])
       const [error, setError] = useState('')
+      const [lastError, setLastError] = useState('')
 
       useEffect(() => {
         if (settingsStore.value === null) void readSettings()
-        return settingsStore.subscribe(() => { setSettings(settingsStore.value) })
+        const readFailure = () => setLastError(failureStore.reason === ''
+          ? '' : `${t('settings.lastError')}${failureStore.detail || t(`strip.failed.${failureStore.reason}`)}`)
+        readFailure()
+        listeners.add(readFailure)
+        const off = settingsStore.subscribe(() => { setSettings(settingsStore.value) })
+        return () => { off(); listeners.delete(readFailure) }
       }, [])
 
       // The picker needs its options before the user opens it: a <select> that loads
@@ -1198,9 +1290,18 @@ window.__ModuleLoader__.load({
         type: 'number', min, max,
         value: current?.[key] ?? '',
         onChange: event => {
-          const parsed = Number(event.target.value)
-          if (Number.isFinite(parsed)) void save({ [key]: parsed })
+          const raw = event.target.value
+          // A cleared field (or an intermediate non-numeric value) must NOT be
+          // persisted: Number('') === 0 used to silently write 0 and disable the
+          // feature (timeout 0, context cap 0, ...). Keep the previous value.
+          if (raw === '' || raw === '-' || raw === '.' || raw === '-.') return
+          const parsed = Number(raw)
+          if (!Number.isFinite(parsed)) return
+          // Clamp with the same bounds the Host enforces, so the UI and the
+          // stored value can never disagree about the allowed range.
+          void save({ [key]: Math.min(max, Math.max(min, parsed)) })
         },
+        title: `${min} – ${max}`,
         style: { ...selectStyle, minWidth: '120px' },
       })
 
@@ -1308,10 +1409,29 @@ window.__ModuleLoader__.load({
               h('div', { style: labelStyle }, t('settings.minConfidence')),
               h('div', { style: hintStyle }, t('settings.minConfidenceHint'))),
             number('minConfidence', 0, 1)),
+          h('div', { style: row },
+            h('div', null,
+              h('div', { style: labelStyle }, t('settings.diagnostics')),
+              h('div', { style: hintStyle }, t('settings.diagnosticsHint'))),
+            h('input', {
+              type: 'checkbox',
+              checked: current?.diagnostics === true,
+              onChange: event => { void save({ diagnostics: event.target.checked }) },
+            })),
+          h('div', { style: row },
+            h('div', null,
+              h('div', { style: labelStyle }, t('settings.gitContext')),
+              h('div', { style: hintStyle }, t('settings.gitContextHint'))),
+            h('input', {
+              type: 'checkbox',
+              checked: current?.gitContext === true,
+              onChange: event => { void save({ gitContext: event.target.checked }) },
+            })),
         ),
 
         h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-label-secondary)', margin: '4px 0 0' } },
           t('settings.costNote')),
+        lastError !== '' && h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-state-error-primary)' } }, lastError),
         error !== '' && h('p', { style: { fontSize: '12px', color: 'var(--dsw-alias-state-error-primary)' } }, error),
       )
     }

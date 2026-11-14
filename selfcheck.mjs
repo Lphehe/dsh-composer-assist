@@ -50,6 +50,43 @@ assert.match(check.SYSTEM.next, /no clear next message, output nothing/)
 assert.deepEqual(check.parseCandidates('').candidates, [])
 assert.deepEqual(check.parseCandidates('1. Only grounded intent.\nCONFIDENCE: 0.8').candidates, ['Only grounded intent.'])
 
+// Issue #11: a cleared number setting must never be persisted as 0, and every
+// numeric field is clamped with the same table the Client's inputs use.
+assert.equal(check.numericOf('', 'timeoutMs'), check.DEFAULTS.timeoutMs, 'empty timeout falls back, never 0')
+assert.equal(check.numericOf('', 'maxInputChars'), check.DEFAULTS.maxInputChars)
+assert.equal(check.numericOf('', 'maxOutputTokens'), check.DEFAULTS.maxOutputTokens)
+assert.equal(check.numericOf('', 'debounceMs'), check.DEFAULTS.debounceMs)
+assert.equal(check.numericOf('', 'minConfidence'), check.DEFAULTS.minConfidence)
+assert.equal(check.numericOf(0, 'timeoutMs'), check.NUMERIC_LIMITS.timeoutMs.min, 'timeout 0 becomes the min')
+assert.equal(check.numericOf(0, 'maxInputChars'), check.NUMERIC_LIMITS.maxInputChars.min)
+assert.equal(check.numericOf(1e9, 'timeoutMs'), check.NUMERIC_LIMITS.timeoutMs.max)
+assert.equal(check.numericOf(0.6, 'minConfidence'), 0.6, 'fractional confidence is preserved')
+assert.equal(check.numericOf(NaN, 'minConfidence'), check.DEFAULTS.minConfidence)
+assert.equal(check.sanitizeSettings({ ...check.DEFAULTS, display: 'card' }).display, 'bar', "legacy 'card' is normalised to 'bar'")
+assert.equal(check.sanitizeSettings({ ...check.DEFAULTS, display: 'inline' }).display, 'inline')
+
+// Issue #6/#13: diagnostics and the git subprocess are OFF by default.
+assert.equal(check.DEFAULTS.diagnostics, false)
+assert.equal(check.DEFAULTS.gitContext, false)
+// Issue #13: with gitContext off, workspaceContext must not even touch subprocess.
+let spawnCalls = 0
+const gitFs = {
+  async resolve() { return '/workspace' },
+  async listDir() { return [{ type: 'file', name: 'README.md' }] },
+}
+const gitProviders = { fs: gitFs, subprocess: { spawn: () => { spawnCalls++; throw new Error('must not spawn') } } }
+assert.equal(await check.workspaceContext(gitProviders, '/workspace'), 'files: README.md')
+assert.equal(spawnCalls, 0, 'no child process when gitContext is off')
+assert.equal(await check.workspaceContext(gitProviders, '/workspace', 8, { gitContext: false }), 'files: README.md')
+assert.equal(spawnCalls, 0)
+
+// Issue #7: turn-tracking maps are bounded so a long-lived Host cannot grow forever.
+const trackingMap = new Map()
+for (let i = 0; i < check.MAX_TRACKED_SESSIONS + 50; i++) check.boundSessionMap(trackingMap, `s${i}`, i)
+assert.equal(trackingMap.size, check.MAX_TRACKED_SESSIONS)
+assert.equal(trackingMap.get(`s${check.MAX_TRACKED_SESSIONS + 49}`), check.MAX_TRACKED_SESSIONS + 49, 'newest entry survives')
+assert.equal(trackingMap.has('s0'), false, 'oldest entry is evicted')
+
 // Execute real Client store/request code with deferred transport, not a second implementation.
 const { readFile } = await import('node:fs/promises')
 const { runInNewContext } = await import('node:vm')
@@ -58,6 +95,7 @@ const requests = []
 let currentSource = 'cut-1'
 const storage = new Map(), timers = new Set(), sourceWaits = []
 let stallSource = false
+let failNextSuggest = null
 const expire = milliseconds => {
   const timer = [...timers].find(value => value.milliseconds === milliseconds)
   assert(timer, `deadline ${milliseconds} was installed`)
@@ -68,17 +106,22 @@ const sandbox = {
   setTimeout: (callback, milliseconds) => { const timer = { callback, milliseconds }; timers.add(timer); return timer },
   clearTimeout: timer => timers.delete(timer),
   window: { __ModuleLoader__: { load: value => { module = value } } },
-  sessionStorage: { getItem: key => storage.get(key) ?? null, setItem: (key, value) => storage.set(key, value) },
+  sessionStorage: {
+    getItem: key => storage.get(key) ?? null,
+    setItem: (key, value) => storage.set(key, value),
+    removeItem: key => storage.delete(key),
+  },
   fetch: async (url, options) => {
     if (String(url).includes('/turn?') && stallSource) return new Promise(resolve => sourceWaits.push(resolve))
     if (!String(url).endsWith('/suggest')) return { json: async () => ({ ok: true, source: currentSource }) }
+    if (failNextSuggest !== null) { const error = failNextSuggest; failNextSuggest = null; throw error }
     const body = JSON.parse(options.body)
     return new Promise(resolve => requests.push({ body, signal: options.signal,
       finish: (text, overrides = {}, stalledBody) => resolve({ json: async () => stalledBody ?? ({ ok: true, text, sessionId: body.sessionId, revision: body.revision, source: 'cut-1', ...overrides }) }) }))
   },
 }
 let clientSource = await readFile(new URL('./client.js', import.meta.url), 'utf8')
-clientSource = clientSource.replace("      inject: ['slots'", "      checks: { runRequest, trackDraft, suggestionBySession, pendingBySession, nextRequestId, settingsStore, sourceMatches },\n      inject: ['slots'")
+clientSource = clientSource.replace("      inject: ['slots'", "      checks: { runRequest, trackDraft, suggestionBySession, pendingBySession, nextRequestId, settingsStore, sourceMatches, failureStore, failureOf, publishFailure, clearFailure, reportProbe },\n      inject: ['slots'")
 runInNewContext(clientSource, sandbox)
 const legacyRecord = { kind: 'next', text: 'KEEP', draftAt: '', source: 'cut-1' }
 sandbox.window[Symbol.for('dsh.composer-assist.session-state.v2')] = {
@@ -171,6 +214,35 @@ timedRequest.finish('LATE OLD REQUEST')
 await new Promise(resolve => setImmediate(resolve))
 assert.equal(client.suggestionBySession.get('a').text, 'NEW AFTER TIMEOUT')
 assert.equal(timers.size, 0, 'all Client deadline timers are cleared')
+
+// Issue #12: a failed request is no longer swallowed silently. runRequest must
+// publish a classified reason, and a later success must clear it again.
+client.clearFailure()
+assert.equal(client.failureStore.reason, '')
+assert.equal(client.failureOf(new DOMException('timeout', 'TimeoutError')), 'timeout')
+assert.equal(client.failureOf(new TypeError('Failed to fetch')), 'network')
+assert.equal(client.failureOf(new Error('没有可用的模型路由')), 'error')
+failNextSuggest = new TypeError('Failed to fetch')
+const failedRun = client.runRequest('next', 'fail-session', '', 'failure-test')
+await failedRun
+assert.equal(client.failureStore.reason, 'network', 'failure is published, not swallowed')
+assert.match(client.failureStore.detail, /Failed to fetch/)
+const recovered = client.runRequest('next', 'fail-session', '', 'recovery')
+requests.at(-1).finish('RECOVERED')
+await recovered
+assert.equal(client.failureStore.reason, '', 'a fresh success clears the failure')
+// A superseded request must not raise a failure for the newer one.
+client.clearFailure()
+const superseded = client.runRequest('next', 'fail-session', '', 'old')
+client.nextRequestId('fail-session')
+requests.at(-1).finish('LATE', {}, undefined)
+await superseded
+assert.equal(client.failureStore.reason, '', 'superseded request does not publish a failure')
+
+// Issue #6: with diagnostics off (the default), reportProbe is a no-op even in
+// the render path, and never posts anything.
+client.settingsStore.value = { diagnostics: false, enabled: true }
+assert.equal(client.reportProbe({ phase: 'render', draft: 'SECRET DRAFT' }), undefined)
 
 // Execute the actual accept callback through its asynchronous source check.
 const acceptStart = clientSource.indexOf('        let accepting = false')

@@ -20,6 +20,9 @@ const FEEDBACK_PATH = '/api/composer-assist/feedback'
  * measures the live DOM (is the ghost element present, visible, and inside the
  * composer's bounding box) and posts it here, so the real rendering can be checked
  * from the Host without a debugger attached.
+ *
+ * Diagnostics are opt-in: the route is disabled unless `diagnostics` is on, and
+ * no report ever carries user draft text or candidate text.
  */
 let lastProbe = null
 
@@ -54,6 +57,15 @@ const predictingIn = new Map()
  */
 const deliveredTurns = new Map()
 
+/** Cap turn-tracking maps: a long-lived Host must not grow with session count. */
+const MAX_TRACKED_SESSIONS = 512
+function boundSessionMap(map, sessionId, value) {
+  // Insert/refresh as most-recent, then evict the oldest entry when over the cap.
+  map.delete(sessionId)
+  map.set(sessionId, value)
+  while (map.size > MAX_TRACKED_SESSIONS) map.delete(map.keys().next().value)
+}
+
 /** Bundle-relative settings file; the Host home is the documented per-user store. */
 const settingsFile = () => join(process.env.DSH_HOME ?? join(process.env.HOME ?? '.', '.dsh'), 'composer-assist', 'settings.json')
 
@@ -83,6 +95,26 @@ const DEFAULTS = {
   // behaviour and should not turn on silently.
   learn: false,
   learnStats: { accepted: 0, dismissed: 0, acceptedChars: 0, dismissedChars: 0 },
+  // Diagnostics: off by default. When off the browser posts no probe reports,
+  // the /probe route refuses them, and no renderer state is kept on the Host.
+  diagnostics: false,
+  // Workspace context: only top-level file names by default. Git status needs a
+  // child process, so it is a separate explicit opt-in, never an implicit side
+  // effect of enabling the plugin.
+  gitContext: false,
+}
+
+/**
+ * The one authoritative table of numeric settings limits. The Client's number
+ * inputs and the Host's writeSettings both read this, so a value that passes the
+ * UI can never be stored outside the range the Host enforces.
+ */
+const NUMERIC_LIMITS = {
+  maxInputChars: { min: 1000, max: 100000 },
+  maxOutputTokens: { min: 100, max: 4000 },
+  timeoutMs: { min: 2000, max: 120000 },
+  debounceMs: { min: 200, max: 5000 },
+  minConfidence: { min: 0, max: 1 },
 }
 
 const SYSTEM = {
@@ -136,15 +168,45 @@ function statsOf(raw) {
   }
 }
 
+/** Clamp a posted value into one numeric setting's declared range. */
+function numericOf(value, key) {
+  const { min, max } = NUMERIC_LIMITS[key]
+  // An empty field (or a cleared number input) must fall back to the default,
+  // never to Number('') === 0, which used to disable the feature silently.
+  if (value === '' || value === null || value === undefined) return DEFAULTS[key]
+  const number = Number(value)
+  if (!Number.isFinite(number)) return DEFAULTS[key]
+  return Math.min(max, Math.max(min, number))
+}
+
 /** Read the persisted settings document, defaulting on any malformed or missing file. */
 async function readSettings() {
   try {
     const parsed = JSON.parse(await readFile(settingsFile(), 'utf8'))
     if (parsed === null || typeof parsed !== 'object' || Array.isArray(parsed)) return { ...DEFAULTS }
-    return { ...DEFAULTS, ...parsed }
+    // Normalise on read too: files written by older builds (or edited by hand)
+    // must not carry a legacy display value or an out-of-range number into a run.
+    return sanitizeSettings({ ...DEFAULTS, ...parsed })
   } catch {
     return { ...DEFAULTS }
   }
+}
+
+/** One place that decides every accepted settings value. */
+function sanitizeSettings(next) {
+  next.enabled = next.enabled === true
+  if (!['auto', 'word', 'both', 'off'].includes(next.mode)) next.mode = DEFAULTS.mode
+  // 'card' is a legacy alias for 'bar'; normalise it instead of leaving two
+  // values in circulation and quietly persisting a setting the UI cannot show.
+  next.display = next.display === 'inline' ? 'inline' : 'bar'
+  next.provider = typeof next.provider === 'string' ? next.provider : ''
+  next.model = typeof next.model === 'string' ? next.model : ''
+  for (const key of Object.keys(NUMERIC_LIMITS)) next[key] = numericOf(next[key], key)
+  next.learn = next.learn === true
+  next.learnStats = statsOf(next.learnStats)
+  next.diagnostics = next.diagnostics === true
+  next.gitContext = next.gitContext === true
+  return next
 }
 
 /** Persist a merged settings document; unknown keys are dropped. */
@@ -154,20 +216,7 @@ async function writeSettings(patch) {
   for (const key of Object.keys(DEFAULTS)) {
     if (patch !== null && typeof patch === 'object' && key in patch) next[key] = patch[key]
   }
-  next.enabled = next.enabled === true
-  if (!['auto', 'word', 'both', 'off'].includes(next.mode)) next.mode = DEFAULTS.mode
-  // 'card' is a legacy value: it renders like 'bar', so it stays accepted rather
-  // than rewriting a saved setting behind the user's back.
-  if (!['bar', 'card', 'inline'].includes(next.display)) next.display = DEFAULTS.display
-  next.provider = typeof next.provider === 'string' ? next.provider : ''
-  next.model = typeof next.model === 'string' ? next.model : ''
-  // Confidence bar: keep it a number in [0, 1] regardless of what was posted.
-  const bar = Number(next.minConfidence)
-  next.minConfidence = Number.isFinite(bar) && bar >= 0 && bar <= 1 ? bar : DEFAULTS.minConfidence
-  // Learning toggle and its counters: never let a malformed object reach the file,
-  // and clamp them so a long-lived install cannot grow the counters without bound.
-  next.learn = next.learn === true
-  next.learnStats = statsOf(next.learnStats)
+  sanitizeSettings(next)
   const target = settingsFile()
   await mkdir(dirname(target), { recursive: true })
   await writeFile(target, `${JSON.stringify(next, null, 2)}\n`, 'utf8')
@@ -250,16 +299,20 @@ function sourceOf(session) {
   return `${session.surface.nodes.at(-1) ?? -1}:${session.surface.replaceGeneration}:${session.surface.contentGeneration}`
 }
 
+/** `sourceOf` reads live session state; a torn-down session must degrade, not 500. */
+function safeSource(session) {
+  try { return session === undefined ? null : sourceOf(session) } catch { return null }
+}
+
 /**
- * Build a compact workspace snapshot: top-level file names and git state.
- * Every step is bounded and fails soft — a missing directory, a non-repo, or a
- * slow git call all degrade to "no context" rather than breaking the suggestion.
+ * Build a compact workspace snapshot: top-level file names and, only when the
+ * user explicitly opted in, git state.
  *
- * Reads go through the session's own `fs` and `subprocess` providers instead of
- * node builtins, so a sandboxed or remote provider keeps its permissions and
- * execution world: this must never see a file the session itself cannot.
  * Names only: file contents are never read, and credential-shaped names are
- * dropped so a prompt never carries them.
+ * dropped so a prompt never carries them. Reads go through the session's own
+ * `fs` provider. A git status needs a child process and is therefore never
+ * started unless `gitContext` is explicitly enabled — a sandboxed session must
+ * not have a process spawned behind its tool-layer policy.
  */
 const MAX_SCAN_ENTRIES = 200
 const MAX_GIT_BYTES = 64 * 1024
@@ -298,7 +351,7 @@ async function gitStatus(subprocess, cwd) {
   }
 }
 
-async function workspaceContext(providers, cwd, maxFiles = 8) {
+async function workspaceContext(providers, cwd, maxFiles = 8, options = {}) {
   const fs = providers?.fs
   if (fs === undefined || typeof cwd !== 'string' || cwd === '') return ''
   const signal = AbortSignal.timeout(CONTEXT_TIMEOUT_MS)
@@ -315,7 +368,8 @@ async function workspaceContext(providers, cwd, maxFiles = 8) {
       .map((entry) => entry.name)
 
     const lines = []
-    const status = await gitStatus(providers.subprocess, cwd)
+    // Only an explicit opt-in reaches the subprocess provider.
+    const status = options.gitContext === true ? await gitStatus(providers.subprocess, cwd) : ''
     const [first = '', ...rest] = status.split('\n')
     if (first.startsWith('## ')) lines.push(`branch: ${first.slice(3)}`)
     const changed = rest.filter((line) => line !== '' && !PRIVATE_NAME.test(line.slice(3))).slice(0, 20)
@@ -569,7 +623,7 @@ export function apply(ctx) {
       // One finished answer can only ever produce one prediction, even if the
       // browser polls again or retries after a consume.
       if ((deliveredTurns.get(sessionId) ?? -1) >= turn) return
-      finishedTurns.set(sessionId, turn)
+      boundSessionMap(finishedTurns, sessionId, turn)
     }), 'composer-assist: turn boundaries')
 
     scoped.effect(() => scoped.connection.fetch.register({
@@ -583,10 +637,11 @@ export function apply(ctx) {
         // `consume=1` is the browser acknowledging the turn, so one turn suggests once.
         if (turn !== null && new URL(request.url).searchParams.get('consume') === '1') {
           finishedTurns.delete(sessionId)
-          deliveredTurns.set(sessionId, turn)
+          boundSessionMap(deliveredTurns, sessionId, turn)
         }
         const session = scoped.sessions.get(sessionId)
-        return json(200, { ok: true, turn, source: session === undefined ? null : sourceOf(session) })
+        // A partially torn-down session must not turn the whole feed into a 500.
+        return json(200, { ok: true, turn, source: safeSource(session) })
       },
     }), 'composer-assist: turn route')
 
@@ -595,13 +650,26 @@ export function apply(ctx) {
       methods: ['GET', 'POST'],
       requestBody: 'buffered',
       fetch: async (request) => {
+        // Diagnostics are opt-in. With the default build the browser posts nothing
+        // and the route keeps no renderer state at all.
+        const settings = await readSettings()
+        if (settings.diagnostics !== true) {
+          lastProbe = null; lastAlign = null; lastTranscript = null; probes.length = 0
+          return json(200, { ok: true, disabled: true })
+        }
         if (request.method === 'POST') {
           try {
             const report = await readJson(request)
-            if (report?.phase === 'align') lastAlign = report
-            probes.push(report)
+            // Never retain user draft text or candidate text: a diagnostic report
+            // is about layout and phase, not about what the user typed.
+            const safe = { ...report }
+            delete safe.draft
+            delete safe.ghost
+            delete safe.ghostText
+            if (safe.phase === 'align') lastAlign = safe
+            probes.push(safe)
             if (probes.length > 40) probes.shift()
-            lastProbe = report
+            lastProbe = safe
           } catch { /* keep the previous report */ }
           return json(200, { ok: true })
         }
@@ -624,14 +692,14 @@ export function apply(ctx) {
         const session = sessionId === undefined ? undefined : scoped.sessions.get(sessionId)
         if (session === undefined) return json(404, { ok: false, error: '会话不存在或未加载' })
         const kind = body.kind === 'complete' || body.kind === 'polish' ? body.kind : 'next'
-        const source = sourceOf(session)
+        const source = safeSource(session) ?? ''
         const key = `${session.id}:${kind}`
         const ticket = {}
         const reply = data => json(200, { ...data, sessionId, source, revision: body.revision })
         if (body.source !== undefined && body.source !== source) return reply({ ok: true, text: '', reason: 'stale-source' })
         latestRequests.set(key, ticket)
         inflight.get(key)?.abort()
-        const stale = () => latestRequests.get(key) !== ticket || sourceOf(session) !== source
+        const stale = () => latestRequests.get(key) !== ticket || safeSource(session) !== source
         const discard = data => {
           if (latestRequests.get(key) === ticket) latestRequests.delete(key)
           return reply(data)
@@ -640,13 +708,17 @@ export function apply(ctx) {
         const draft = typeof body.draft === 'string' ? body.draft : ''
         const history = transcript(session, settings.maxInputChars)
         const basePrompt = buildPrompt(kind, draft, history)
-        // Record what the transcript actually looked like at the moment of the
-        // request: an empty fold and an empty log are different bugs.
-        lastTranscript = {
-          at: Date.now(), sessionId: session.id, kind,
-          messages: session.deriveMessages().length,
-          chars: history.length,
-          seq: String(session.seq),
+        // Only keep the transcript report while diagnostics are on, and never
+        // store user text: just counts and lengths.
+        if (settings.diagnostics === true) {
+          lastTranscript = {
+            at: Date.now(), sessionId: session.id, kind,
+            messages: session.deriveMessages().length,
+            chars: history.length,
+            seq: String(session.seq),
+          }
+        } else {
+          lastTranscript = null
         }
         if (basePrompt === undefined) {
           // Name the reason: an empty transcript and a model that answered nothing
@@ -656,10 +728,9 @@ export function apply(ctx) {
         // Acceptance learning appends one style sentence when it has enough signal;
         // it is opt-in and off by default.
         const hint = settings.learn === true ? learnHint(settings.learnStats) : ''
-        // Workspace context: recent files and git state. Best-effort — a missing
-        // service, an unreadable directory, or a slow git call all degrade to no
-        // context instead of failing the suggestion. `get(session)` is a read-only
-        // synchronous lookup, so no agent handle or `ensure()` round trip is needed.
+        // Workspace context: recent files, plus git state only when explicitly
+        // opted in. Best-effort — a missing service, an unreadable directory, or a
+        // slow git call all degrade to no context instead of failing the suggestion.
         if (stale()) return discard({ ok: true, text: '', reason: 'stale-source' })
         const abort = new AbortController()
         inflight.set(key, abort)
@@ -671,10 +742,11 @@ export function apply(ctx) {
             try {
               return await workspaceContext(
                 { fs: scoped.get('fs'), subprocess: scoped.get('subprocess') },
-                scoped.get('workingDirectory')?.get(session))
+                scoped.get('workingDirectory')?.get(session), 8,
+                { gitContext: settings.gitContext })
             } catch { return '' }
           }, abort.signal)
-          lastTranscript.workspaceChars = context.length
+          if (settings.diagnostics === true && lastTranscript !== null) lastTranscript.workspaceChars = context.length
           const prompt = [basePrompt, hint, context].filter((part) => part !== '').join('\n\n')
           if (stale()) return reply({ ok: true, text: '', reason: 'stale-source' })
           const raw = await generate(scoped, session, settings, SYSTEM[kind], prompt, abort.signal, key)
@@ -704,4 +776,4 @@ export function apply(ctx) {
 }
 
 /** Internals the self-check exercises directly; not part of the plugin contract. */
-export const __test = { parseCandidates, statsOf, learnHint, workspaceContext, gitStatus, readSettings, writeSettings, withSettings, transcript, sourceOf, SYSTEM, buildPrompt, abortable, generate, runAuxiliary, runningCalls, predictingIn, DEFAULTS }
+export const __test = { parseCandidates, statsOf, learnHint, workspaceContext, gitStatus, readSettings, writeSettings, sanitizeSettings, numericOf, NUMERIC_LIMITS, boundSessionMap, finishedTurns, deliveredTurns, MAX_TRACKED_SESSIONS, withSettings, transcript, sourceOf, safeSource, SYSTEM, buildPrompt, abortable, generate, runAuxiliary, runningCalls, predictingIn, DEFAULTS }
